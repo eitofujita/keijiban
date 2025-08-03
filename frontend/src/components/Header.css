@@ -1,0 +1,123 @@
+.app-header {
+  background: linear-gradient(to right, #e3e3e3, #0072ff);
+  padding: 1rem 2rem;
+  box-shadow: 0 4px 15px rgb(3, 3, 3);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.header-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  height: 60px;
+}
+
+.menu-button {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: rgb(0, 0, 0);
+  font-size: 1.8rem;
+  cursor: pointer;
+  z-index: 1100; /* 十分に前面へ */
+}
+
+
+/* 検索フォームを中央に */
+.search-form {
+  display: flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(0, 0, 0, 0.3);
+  border-radius: 9999px;
+  padding: 0.5rem 1rem;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+.search-form:hover {
+  box-shadow: 0 0 15px rgba(206, 206, 206, 0.5);
+}
+
+.search-input {
+  border: none;
+  background: transparent;
+  color: white;
+  font-size: 1rem;
+  padding: 0.5rem;
+  outline: none;
+  width: 180px;
+}
+
+.search-input::placeholder {
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.search-button {
+  border: none;
+  background: none;
+  color: white;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.search-button:hover {
+  transform: scale(1.2);
+}
+
+/* プロフィール全体を包むラッパー */
+.profile-wrapper {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  z-index: 1100;
+}
+
+/* プロフィール画像のスタイル */
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid white;
+  object-fit: cover;
+}
+
+/* メニュー本体 */
+.profile-menu {
+  position: absolute;
+  top: 50px;
+  right: 0;
+  background: #ffffff;
+  border-radius: 0.5rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+  overflow: hidden;
+  z-index: 1001;
+}
+
+/* メニュー内の各リンク */
+.profile-menu a {
+  padding: 0.75rem 1rem;
+  color: #333333;
+  text-decoration: none;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.profile-menu a:hover {
+  background-color: #f5f5f5;
+}

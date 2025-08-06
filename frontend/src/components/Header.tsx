@@ -22,13 +22,10 @@ export default function Header({ toggleSidebar, user }: HeaderProps) {
     signOut(auth).catch((error) => console.error(error));
   };
 
-  // 👇 外をクリックしたら閉じる処理
+  // 外クリックでメニューを閉じる
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        menuRef.current &&
-        !menuRef.current.contains(event.target as Node)
-      ) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setMenuOpen(false);
       }
     };
@@ -42,35 +39,44 @@ export default function Header({ toggleSidebar, user }: HeaderProps) {
   return (
     <header className="app-header">
       <div className="header-content">
-        {/* メニューボタン */}
-        <button className="menu-button" onClick={toggleSidebar}>
-          ☰
-        </button>
+        {/* 左：メニューボタン */}
+        <div className="header-left">
+          <button className="menu-button" onClick={toggleSidebar}>☰</button>
+        </div>
 
-        {/* 検索フォーム */}
-        <form className="search-form" onSubmit={(e) => e.preventDefault()}>
-          <input type="text" placeholder="検索..." className="search-input" />
-          <button type="submit" className="search-button"></button>
-        </form>
+        {/* 中央：検索フォーム */}
+        <div className="header-center">
+          <form className="search-form" onSubmit={(e) => e.preventDefault()}>
+            <input type="text" placeholder="検索..." className="search-input" />
+            <button type="submit" className="search-button"></button>
+          </form>
+        </div>
 
-        {/* プロフィールアイコン */}
-        <div className="profile-wrapper" ref={menuRef}>
+        {/* 右：Createボタン + アバター + メニュー */}
+        <div className="header-right profile-wrapper" ref={menuRef}>
+          <Link to="/create" className="create-button">
+            作成＋
+          </Link>
+
           <img
-            src="/avatar.png"
+            src={user?.photoURL || "/avatar.png"}
             alt="Avatar"
             className="avatar"
             onClick={toggleMenu}
           />
+
           {menuOpen && (
-            <div className="dropdown-menu">
+            <div className="profile-menu">
               {user ? (
                 <>
-                  <a href="/profile">プロフィールを見る</a>
-                  <a href="/settings">設定</a>
-                  <div onClick={handleLogout}>ログアウト</div>
+                  <div className="profile-item">{user.displayName}</div>
+                  <div className="profile-item">{user.email}</div>
+                  <div className="profile-item logout" onClick={handleLogout}>
+                    ログアウト
+                  </div>
                 </>
               ) : (
-                <Link to="/login">ログイン</Link>
+                <Link className="profile-item" to="/login">ログイン</Link>
               )}
             </div>
           )}

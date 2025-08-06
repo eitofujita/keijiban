@@ -1,0 +1,88 @@
+/* ログインページ全体の中央揃え */
+.login-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: calc(100vh - 60px); /* ヘッダー分を除く */
+  background-color: #f0f2f5;
+  padding: 2rem;
+  text-align: center;
+}
+
+/* タイトル */
+.login-title {
+  font-size: 2rem;
+  color: #333;
+  margin-bottom: 2rem;
+  font-weight: bold;
+}
+
+/* Googleログインボタン */
+.google-login-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+
+  padding: 0.75rem 1.5rem;
+  background-color: #4285f4;
+  color: white;
+  font-size: 1rem;
+  font-weight: 500;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.google-login-button:hover {
+  background-color: #357ae8;
+}
+
+/* モバイル対応 */
+@media (max-width: 600px) {
+  .login-title {
+    font-size: 1.5rem;
+  }
+
+  .google-login-button {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+  }
+}
+
+
+.google-login-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 50px;
+  background: linear-gradient(to right, #4285F4, #34A853, #FBBC05, #EA4335);
+  background-size: 300% 100%;
+  color: white;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  transition: all 0.4s ease;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.google-login-button:hover {
+  background-position: right center;
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.google-icon {
+  width: 24px;
+  height: 24px;
+  background: white;
+  border-radius: 50%;
+  padding: 2px;
+}

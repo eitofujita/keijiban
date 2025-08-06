@@ -1,109 +1,32 @@
+/* 投稿カード全体 */
 .post-card {
-  border: 1px solid #ccc;
-  padding: 1rem;
-  margin-bottom: 1.5rem;
-  border-radius: 8px;
-  background-color: #fafafa;
-}
-
-.post-title {
-  font-size: 1.2rem;
-  font-weight: bold;
-  margin-bottom: 0.5rem;
-}
-
-.post-content {
-  margin-bottom: 1rem;
-}
-
-.post-actions {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-.like-button {
-  background-color: #8a8a8a;
-  color: rgb(255, 255, 255);
+  max-width: 640px;
+  margin: 2rem auto;
+  background: linear-gradient(to bottom, #ffffff, #f4f8ff);
   border: none;
-  padding: 6px 12px;
-  border-radius: 4px;
-  cursor: pointer;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.3s ease;
 }
 
-.like-button:hover {
-  background-color: #0056b3;
+.post-card:hover {
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
 }
 
-.dislike-button:hover {
-  background-color: #0056b3;
-}
-
-.dislike-button {
-  background-color: #8a8a8a;
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-
-
-.comment-count {
-  font-size: 0.9rem;
-  color: #000000;
-}
-
-.comment-section {
-  margin-top: 1rem;
-}
-
-.comment-input {
-  width: 80%;
-  padding: 0.5rem;
-  margin-right: 0.5rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
-
-.comment-submit {
-  padding: 0.5rem 1rem;
-  background-color: #28a745;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.comment-submit:hover {
-  background-color: #1e7e34;
-}
-
-.comment-list {
-  margin-top: 0.5rem;
-  padding-left: 1rem;
-}
-
-.comment-item {
-  font-size: 0.9rem;
-  color: #000000;
-  margin-top: 0.2rem;
-}
-
+/* 投稿上部（ユーザー名＋日付） */
 .post-header {
   display: flex;
   align-items: center;
-  margin-bottom: 0.5rem;
+  margin-bottom: 1rem;
 }
 
 .profile-icon {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  margin-right: 0.5rem;
   object-fit: cover;
+  margin-right: 0.75rem;
   border: 1px solid #ccc;
 }
 
@@ -116,14 +39,104 @@
 }
 
 .username {
-  font-weight: bold;
+  font-weight: 600;
   color: #0079d3; /* Redditブルー */
+}
+
+.timestamp {
+  color: #888;
 }
 
 .dot {
   margin: 0 4px;
 }
 
-.timestamp {
-  color: #777;
+/* タイトル */
+.post-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  color: #222;
+}
+
+/* 本文 */
+.post-content {
+  font-size: 1rem;
+  color: #333;
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+
+/* いいね・コメント行 */
+.post-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.like-button,
+.dislike-button {
+  background-color: #0079d3;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.like-button:hover,
+.dislike-button:hover {
+  background-color: #005bb5;
+}
+
+.comment-count {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+/* コメントエリア */
+.comment-section {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #eee;
+}
+
+.comment-input {
+  width: 75%;
+  padding: 0.5rem 1rem;
+  border: 1px solid #ccc;
+  border-radius: 999px;
+  outline: none;
+  font-size: 0.95rem;
+  margin-right: 0.5rem;
+  background-color: #f9f9f9;
+}
+
+.comment-submit {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 0.5rem 1.2rem;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.comment-submit:hover {
+  background-color: #1e7e34;
+}
+
+.comment-list {
+  margin-top: 1rem;
+  padding-left: 1rem;
+}
+
+.comment-item {
+  font-size: 0.95rem;
+  color: #222;
+  margin-top: 0.5rem;
 }

@@ -25,11 +25,9 @@ type HomeProps = {
   user: User | null;
 };
 
-const Home = ({ user }: HomeProps) => {
+const Home = ({ }: HomeProps) => {
   return (
     <div className="home-container">
-      <h1 className="home-title">掲示板</h1>
-      <h2>ようこそ、{user?.displayName ?? "ゲスト"} さん！</h2>
 
       {posts.map((p) => (
         <Post key={p.id} {...p} />

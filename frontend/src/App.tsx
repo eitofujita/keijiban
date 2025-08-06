@@ -13,21 +13,18 @@ import type { User } from "firebase/auth";
 function App() {
   const [isSidebarOpen, setSidebaropen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true); // 🔸 ローディング状態を追加
+ 
 
   const toggleSidebar = () => setSidebaropen((prev) => !prev);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser);
-      setLoading(false); // 🔸 ローディング終了
+    const unsubscribe = onAuthStateChanged(auth, (User) => {
+      setUser(User);
+      
     });
     return () => unsubscribe();
   }, []); // ← useEffect に依存配列が抜けてたので追加！
 
-  if (loading) {
-    return <div>Loading...</div>; // 🔸 読み込み中の表示
-  }
 
   return (
     <Router>
@@ -35,7 +32,7 @@ function App() {
         <FaBars size={24} />
       </button>
       <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
-        <Header toggleSidebar={toggleSidebar} />
+        <Header toggleSidebar={toggleSidebar} user={user} />
         <div style={{ display: "flex", flex: 1 }}>
           <Sidebar isOpen={isSidebarOpen} toggleMenu={toggleSidebar} />
           <main style={{ flex: 1, padding: "1rem" }}>

@@ -1,0 +1,129 @@
+.post-card {
+  border: 1px solid #ccc;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  border-radius: 8px;
+  background-color: #fafafa;
+}
+
+.post-title {
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.post-content {
+  margin-bottom: 1rem;
+}
+
+.post-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.like-button {
+  background-color: #8a8a8a;
+  color: rgb(255, 255, 255);
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.like-button:hover {
+  background-color: #0056b3;
+}
+
+.dislike-button:hover {
+  background-color: #0056b3;
+}
+
+.dislike-button {
+  background-color: #8a8a8a;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+
+
+.comment-count {
+  font-size: 0.9rem;
+  color: #000000;
+}
+
+.comment-section {
+  margin-top: 1rem;
+}
+
+.comment-input {
+  width: 80%;
+  padding: 0.5rem;
+  margin-right: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.comment-submit {
+  padding: 0.5rem 1rem;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.comment-submit:hover {
+  background-color: #1e7e34;
+}
+
+.comment-list {
+  margin-top: 0.5rem;
+  padding-left: 1rem;
+}
+
+.comment-item {
+  font-size: 0.9rem;
+  color: #000000;
+  margin-top: 0.2rem;
+}
+
+.post-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.profile-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  margin-right: 0.5rem;
+  object-fit: cover;
+  border: 1px solid #ccc;
+}
+
+.post-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #555;
+}
+
+.username {
+  font-weight: bold;
+  color: #0079d3; /* Redditブルー */
+}
+
+.dot {
+  margin: 0 4px;
+}
+
+.timestamp {
+  color: #777;
+}

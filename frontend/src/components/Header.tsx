@@ -5,10 +5,13 @@ import { auth } from "../firebase";
 import { Link } from "react-router-dom";
 import "./Header.css";
 
+
 type HeaderProps = {
   toggleSidebar: () => void;
   user: User | null;
 };
+
+
 
 export default function Header({ toggleSidebar, user }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -70,10 +73,13 @@ export default function Header({ toggleSidebar, user }: HeaderProps) {
               {user ? (
                 <>
                   <div className="profile-item">{user.displayName}</div>
-                  <div className="profile-item">{user.email}</div>
+                  <Link className="profile-item" to="/profile">
+                         View Profile
+                   </Link>
                   <div className="profile-item logout" onClick={handleLogout}>
                     ログアウト
                   </div>
+
                 </>
               ) : (
                 <Link className="profile-item" to="/login">ログイン</Link>

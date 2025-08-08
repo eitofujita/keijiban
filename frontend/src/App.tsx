@@ -9,6 +9,10 @@ import Login from "./components/Login";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./firebase";
 import type { User } from "firebase/auth";
+import Create from "./pages/Create";
+import Profile from "./pages/Profile";
+
+
 
 function App() {
   const [isSidebarOpen, setSidebaropen] = useState(false);
@@ -38,6 +42,8 @@ function App() {
           <main style={{ flex: 1, padding: "1rem" }}>
             <Routes>
               <Route path="/" element={<Home user={user} />} />
+              <Route path="/create" element={<Create />} />
+              <Route path="/profile" element={<Profile />} />
               <Route path="/post/:id" element={<PostDetail />} />
               <Route path="/login" element={<Login />} />
             </Routes>

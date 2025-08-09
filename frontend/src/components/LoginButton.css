@@ -1,0 +1,37 @@
+/* 親コンテナ */
+.login-container {
+  height: 100vh;
+  display: flex;
+  align-items: center;     /* 縦方向中央 */
+  justify-content: center; /* 横方向中央 */
+  background-color: #f0f2f5; /* 背景色は任意 */
+}
+
+/* Googleログインボタン */
+.google-login-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 50px;
+  background: linear-gradient(to right, #4285F4, #34A853, #FBBC05, #EA4335);
+  background-size: 300% 100%;
+  color: white;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  transition: all 0.4s ease;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Googleのアイコン */
+.google-icon {
+  width: 24px;
+  height: 24px;
+  background: white;
+  border-radius: 50%;
+  padding: 2px;
+}

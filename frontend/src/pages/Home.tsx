@@ -1,6 +1,6 @@
 import { Post } from "../components/Post";
-import type { User } from "firebase/auth"; // 👈 type-only import
-import "./Home.css";
+import type { User } from "firebase/auth";
+import { Container, Typography, Box } from "@mui/material";
 
 const posts = [
   {
@@ -25,14 +25,22 @@ type HomeProps = {
   user: User | null;
 };
 
-const Home = ({ }: HomeProps) => {
+const Home = ({ user: _user }: HomeProps) => {
   return (
-    <div className="home-container">
+    <Box sx={{ backgroundColor: "#121212", minHeight: "100vh", py: 4 }}>
+      <Container maxWidth="md">
+        <Typography
+          variant="h4"
+          sx={{ color: "#ffffff", fontWeight: "bold", mb: 4 }}
+        >
+          投稿一覧
+        </Typography>
 
-      {posts.map((p) => (
-        <Post key={p.id} {...p} />
-      ))}
-    </div>
+        {posts.map((p) => (
+          <Post key={p.id} {...p} />
+        ))}
+      </Container>
+    </Box>
   );
 };
 

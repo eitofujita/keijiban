@@ -3,7 +3,7 @@
 import { signInWithPopup } from "firebase/auth";
 import { auth, provider } from "../firebase";
 import { useNavigate } from "react-router-dom";
-import "./Login.css"; // CSS を適用！
+import "./LoginButton.css"; 
 
 const LoginButton = () => {
   const navigate = useNavigate();

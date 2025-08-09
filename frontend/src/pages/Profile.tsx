@@ -2,6 +2,14 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { db } from "../firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
+import {
+  Box,
+  Typography,
+  CircularProgress,
+  Card,
+  CardContent,
+  Container,
+} from "@mui/material";
 
 type Post = {
   id: string;
@@ -10,10 +18,9 @@ type Post = {
 };
 
 const Profile = () => {
-  const { user, loading } = useAuth(); // ✅ 修正ここ！
-
+  const { user, loading } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
-  const [isFetching, setIsFetching] = useState(true); // 投稿取得中フラグ
+  const [isFetching, setIsFetching] = useState(true);
 
   useEffect(() => {
     const fetchPosts = async () => {
@@ -49,30 +56,77 @@ const Profile = () => {
   }, [user, loading]);
 
   if (loading) {
-    return <p>認証情報を確認中...</p>;
+    return (
+      <Box
+        sx={{
+          backgroundColor: "#121212",
+          color: "#fff",
+          height: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <CircularProgress color="inherit" />
+        <Typography sx={{ ml: 2 }}>認証情報を確認中...</Typography>
+      </Box>
+    );
   }
 
   if (!user) {
-    return <p>ログインしていません。</p>;
+    return (
+      <Box
+        sx={{
+          backgroundColor: "#121212",
+          color: "#fff",
+          height: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Typography>ログインしていません。</Typography>
+      </Box>
+    );
   }
 
   return (
-    <div className="profile-container">
-      <h2>{user.displayName ?? "ユーザー"} の投稿</h2>
+    <Box sx={{ backgroundColor: "#121212", minHeight: "100vh", py: 4 }}>
+      <Container maxWidth="md">
+        <Typography
+          variant="h5"
+          sx={{ color: "#fff", fontWeight: "bold", mb: 4 }}
+        >
+          {user.displayName ?? "ユーザー"} の投稿
+        </Typography>
 
-      {isFetching ? (
-        <p>投稿を読み込み中...</p>
-      ) : posts.length === 0 ? (
-        <p>投稿が見つかりません。</p>
-      ) : (
-        posts.map((post) => (
-          <div key={post.id} className="post-card">
-            <h3>{post.title}</h3>
-            <p>{post.content}</p>
-          </div>
-        ))
-      )}
-    </div>
+        {isFetching ? (
+          <Typography sx={{ color: "#ccc" }}>投稿を読み込み中...</Typography>
+        ) : posts.length === 0 ? (
+          <Typography sx={{ color: "#ccc" }}>投稿が見つかりません。</Typography>
+        ) : (
+          posts.map((post) => (
+            <Card
+              key={post.id}
+              sx={{
+                backgroundColor: "#1e1e1e",
+                color: "#fff",
+                mb: 3,
+                borderRadius: 2,
+                boxShadow: 6,
+              }}
+            >
+              <CardContent>
+                <Typography variant="h6" sx={{ mb: 1 }}>
+                  {post.title}
+                </Typography>
+                <Typography variant="body1">{post.content}</Typography>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </Container>
+    </Box>
   );
 };
 

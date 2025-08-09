@@ -1,34 +1,13 @@
-/* index.css */
-
-/* CSSリセットと基本設定 */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
 html, body {
   height: 100%;
   font-family: 'Segoe UI', 'Noto Sans JP', sans-serif;
-  background-color: #ffffff;
+  background-color: #121212;
   color: #e0e0e0;
   line-height: 1.6;
 }
 
-a {
-  color: #a0a0a0;
-  text-decoration: none;
-  font-weight: 500;
-  transition: color 0.2s ease-in-out;
-}
-
-a:hover {
-  color: #000000;
-}
-
-/* ヘッダー */
 header {
-  background: linear-gradient(90deg, #f9f9f9, #4ca1af);
+  background: #1f1f1f; /* 暗めに修正 */
   color: #fff;
   padding: 1rem 2rem;
   font-size: 1.5rem;
@@ -36,79 +15,25 @@ header {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-/* サイドバー */
+
 aside {
-  background-color: #fffdfd;
+  background-color: #1c1c1c;
   padding: 2rem 1rem;
   min-height: 100vh;
   width: 220px;
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
 }
 
-aside ul {
-  list-style: none;
-}
-
-aside li {
-  margin-bottom: 1rem;
-}
-
-aside a {
-  display: block;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-}
-
-aside a:hover {
-  background-color: #ffffff;
-  color: #fff;
-}
-
-/* メインコンテンツ */
 main {
   padding: 2rem;
   flex: 1;
-  background-color: #ffffff;
+  background-color: #121212;
 }
 
-/* 投稿カード */
-.post-card {
-  background-color: #000000;
-  border-radius: 10px;
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-  transition: transform 0.2s ease;
+a {
+  color: #aaa;
 }
 
-.post-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.3);
-}
-
-.post-card h2 {
-  font-size: 1.4rem;
-  color: #ffffff;
-  margin-bottom: 0.5rem;
-}
-
-.post-card p {
-  font-size: 1rem;
-  color: #cccccc;
-}
-
-.post-card .upvotes {
-  font-size: 0.9rem;
-  color: #000000;
-  margin-top: 1rem;
-}
-.hamburger-fixed {
-  position: fixed;
-  top: 1rem;
-  left: 1rem;
-  z-index: 1000;
-  background: none;
-  border: none;
-  color: white;
-  cursor: pointer;
+a:hover {
+  color: #f0f0f0;
 }

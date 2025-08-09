@@ -1,6 +1,21 @@
-// components/Post.tsx
 import { useState } from "react";
-import "./Post.css";
+import {
+  Card,
+  CardHeader,
+  CardContent,
+  Avatar,
+  Typography,
+  IconButton,
+  TextField,
+  Button,
+  Box,
+  List,
+  ListItem,
+  ListItemText,
+} from "@mui/material";
+import ThumbUpIcon from "@mui/icons-material/ThumbUp";
+import ThumbDownIcon from "@mui/icons-material/ThumbDown";
+import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 
 type PostProps = {
   id: string;
@@ -11,49 +26,47 @@ type PostProps = {
   timestamp: string;
 };
 
-export const Post = ({ id:_7, title, content, upvotes,username,timestamp }: PostProps) => {
+export const Post = ({
+  title,
+  content,
+  upvotes,
+  username,
+  timestamp,
+}: PostProps) => {
   const [likes, setLikes] = useState(upvotes);
   const [dislikes, setDislikes] = useState(0);
   const [hasLiked, setHasLiked] = useState(false);
   const [hasDisliked, setHasDisliked] = useState(false);
   const [comments, setComments] = useState<string[]>([]);
   const [commentText, setCommentText] = useState("");
-  
- const handleLike = () => {
-  if (hasLiked) {
-    setLikes((prev) => prev - 1);
-    setHasLiked(false);
-  } else {
-    setLikes((prev) => prev + 1);
-    setHasLiked(true);
 
-    if (hasDisliked) {
-      setDislikes((prev) => prev - 1);
-      setHasDisliked(false);
-    }
-  }
-};
-
-
-
-const handleDislike = () => {
-  if (hasDisliked) {
-    setDislikes((prev) => prev - 1);
-    setHasDisliked(false);
-  } else {
-    setDislikes((prev) => prev + 1);
-    setHasDisliked(true);
-
-  
+  const handleLike = () => {
     if (hasLiked) {
       setLikes((prev) => prev - 1);
       setHasLiked(false);
+    } else {
+      setLikes((prev) => prev + 1);
+      setHasLiked(true);
+      if (hasDisliked) {
+        setDislikes((prev) => prev - 1);
+        setHasDisliked(false);
+      }
     }
-  }
-};
+  };
 
-
-
+  const handleDislike = () => {
+    if (hasDisliked) {
+      setDislikes((prev) => prev - 1);
+      setHasDisliked(false);
+    } else {
+      setDislikes((prev) => prev + 1);
+      setHasDisliked(true);
+      if (hasLiked) {
+        setLikes((prev) => prev - 1);
+        setHasLiked(false);
+      }
+    }
+  };
 
   const handleAddComment = () => {
     if (commentText.trim() !== "") {
@@ -63,50 +76,89 @@ const handleDislike = () => {
   };
 
   return (
-
-  <div className="post-card">
-    
-    <div className="post-header">
-      <img
-        src="/profile.png"
-        alt="プロフィール画像"
-        className="profile-icon"
+    <Card
+      sx={{
+        backgroundColor: "#1e1e1e",
+        color: "#f0f0f0",
+        borderRadius: "16px",
+        mb: 4,
+        p: 2,
+        boxShadow: 6,
+      }}
+    >
+      <CardHeader
+        avatar={<Avatar src="/profile.png" />}
+        title={
+          <Typography sx={{ fontWeight: "bold", color: "#f0f0f0" }}>
+            {username}
+          </Typography>
+        }
+        subheader={
+          <Typography variant="body2" sx={{ color: "#aaa" }}>
+            {timestamp}
+          </Typography>
+        }
       />
-      <div className="post-meta">
-        <span className="username">{username}</span>
-        <span className="dot">•</span>
-        <span className="timestamp">{timestamp}</span>
-      </div>
-    </div>
 
-    <h3 className="post-title">{title}</h3>
-    <p className="post-content">{content}</p>
+      <CardContent>
+        <Typography variant="h6" sx={{ mb: 1 }}>
+          {title}
+        </Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
+          {content}
+        </Typography>
 
-    <div className="post-actions">
-      <button className="like-button" onClick={handleLike}>👍 {likes}</button>
-      <button className="dislike-button" onClick={handleDislike}>👎 {dislikes}</button>
-      <span className="comment-count">💬 {comments.length}</span>
-    </div>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
+          <IconButton onClick={handleLike} color={hasLiked ? "primary" : "default"}>
+            <ThumbUpIcon />
+            <Typography sx={{ ml: 0.5 }}>{likes}</Typography>
+          </IconButton>
+          <IconButton onClick={handleDislike} color={hasDisliked ? "error" : "default"}>
+            <ThumbDownIcon />
+            <Typography sx={{ ml: 0.5 }}>{dislikes}</Typography>
+          </IconButton>
+          <Box sx={{ display: "flex", alignItems: "center" }}>
+            <ChatBubbleOutlineIcon sx={{ mr: 0.5 }} />
+            <Typography>{comments.length}</Typography>
+          </Box>
+        </Box>
 
-    <div className="comment-section">
-      <input
-        type="text"
-        value={commentText}
-        onChange={(e) => setCommentText(e.target.value)}
-        placeholder="コメントを入力..."
-        className="comment-input"
-      />
-      <button className="comment-submit" onClick={handleAddComment}>
-        投稿
-      </button>
+        <Box sx={{ display: "flex", gap: 1, mb: 2 }}>
+          <TextField
+            variant="outlined"
+            size="small"
+            fullWidth
+            value={commentText}
+            onChange={(e) => setCommentText(e.target.value)}
+            placeholder="コメントを入力..."
+            sx={{
+              input: { color: "white" },
+              "& .MuiOutlinedInput-root": {
+                "& fieldset": {
+                  borderColor: "#555",
+                },
+                "&:hover fieldset": {
+                  borderColor: "#888",
+                },
+              },
+            }}
+          />
+          <Button variant="contained" color="success" onClick={handleAddComment}>
+            投稿
+          </Button>
+        </Box>
 
-      <ul className="comment-list">
-        {comments.map((c, i) => (
-          <li key={i} className="comment-item">・{c}</li>
-        ))}
-      </ul>
-    </div>
-  </div>
-);
-
+        <List dense>
+          {comments.map((c, i) => (
+            <ListItem key={i} disablePadding>
+              <ListItemText
+                primary={`・${c}`}
+                primaryTypographyProps={{ style: { color: "#ccc" } }}
+              />
+            </ListItem>
+          ))}
+        </List>
+      </CardContent>
+    </Card>
+  );
 };

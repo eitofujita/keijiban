@@ -1,9 +1,17 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import "./Create.css";
 import { useAuth } from "../hooks/useAuth";
 import { db } from "../firebase";
 import { collection, addDoc } from "firebase/firestore";
+
+import {
+  Container,
+  Box,
+  TextField,
+  Button,
+  Typography,
+  Paper,
+} from "@mui/material";
 
 const Create = () => {
   const [title, setTitle] = useState("");
@@ -37,7 +45,7 @@ const Create = () => {
       });
 
       console.log("✅ 投稿成功:", { title, content, uid: user.uid });
-      navigate("/"); // ホームに遷移
+      navigate("/");
       console.log("🏠 ホームに遷移しました");
     } catch (error) {
       console.error("❌ 投稿失敗:", error);
@@ -46,25 +54,66 @@ const Create = () => {
   };
 
   return (
-    <div className="create-container">
-      <h2>新しい投稿を作成</h2>
-      <form onSubmit={handleSubmit} className="create-form">
-        <input
-          type="text"
-          placeholder="タイトル"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          required
-        />
-        <textarea
-          placeholder="本文を入力"
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          required
-        />
-        <button type="submit">投稿する</button>
-      </form>
-    </div>
+    <Container maxWidth="sm">
+      <Paper
+        elevation={6}
+        sx={{
+          backgroundColor: "#1e1e1e",
+          color: "#f0f0f0",
+          p: 4,
+          borderRadius: 3,
+          mt: 4,
+        }}
+      >
+        <Typography variant="h5" sx={{ mb: 3 }}>
+          新しい投稿を作成
+        </Typography>
+
+        <Box component="form" onSubmit={handleSubmit} noValidate>
+          <TextField
+            fullWidth
+            variant="outlined"
+            label="タイトル"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            required
+            sx={{
+              mb: 2,
+              input: { color: "#fff" },
+              label: { color: "#bbb" },
+              "& .MuiOutlinedInput-root": {
+                "& fieldset": { borderColor: "#555" },
+                "&:hover fieldset": { borderColor: "#888" },
+              },
+            }}
+          />
+
+          <TextField
+            fullWidth
+            variant="outlined"
+            label="本文を入力"
+            multiline
+            rows={6}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            required
+            sx={{
+              mb: 3,
+              input: { color: "#fff" },
+              label: { color: "#bbb" },
+              "& .MuiOutlinedInput-root": {
+                "& fieldset": { borderColor: "#555" },
+                "&:hover fieldset": { borderColor: "#888" },
+              },
+            }}
+          />
+
+          <Button type="submit" variant="contained" color="primary" fullWidth>
+            投稿する
+          </Button>
+        </Box>
+      </Paper>
+    </Container>
   );
 };
 

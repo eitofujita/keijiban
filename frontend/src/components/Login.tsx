@@ -1,11 +1,27 @@
+import { Box, Typography, Container, Paper } from "@mui/material";
 import LoginButton from "../components/LoginButton";
-import "./Login.css";
 
 export default function Login() {
   return (
-    <div className="login-container">
-      <h2 className="login-title">ログインしてください</h2>
-      <LoginButton />
-    </div>
+    <Container maxWidth="sm">
+      <Paper
+        elevation={4}
+        sx={{
+          mt: 8,
+          p: 4,
+          borderRadius: 3,
+          textAlign: "center",
+        }}
+      >
+        <Typography variant="h5" fontWeight="bold" gutterBottom>
+          ログインしてください
+        </Typography>
+
+        {/* ボタン中央寄せ */}
+        <Box mt={3} display="flex" justifyContent="center">
+          <LoginButton />
+        </Box>
+      </Paper>
+    </Container>
   );
 }

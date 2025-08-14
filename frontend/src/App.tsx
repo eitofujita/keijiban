@@ -13,6 +13,10 @@ import Profile from "./pages/Profile";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import CreateCommunity from "./pages/CreateCommunity"; 
+import ManageCommunities from "./pages/ManageComunities";
+import CommunityPage from "./pages/CommunityPage";
+import CreatePostPage from "./pages/CreatePostPage";
+
 
 const darkishTheme = createTheme({
   palette: {
@@ -71,6 +75,9 @@ function App() {
                 <Route path="/" element={<Home user={user} />} />
                 <Route path="/create" element={<Create />} />
                  <Route path="/create-community" element={<CreateCommunity />} />
+                 <Route path="/manage-communities" element={<ManageCommunities />} />
+                 <Route path="/r/:slug" element={<CommunityPage />} />
+                 <Route path="/r/:slug/create-post" element={<CreatePostPage />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/post/:id" element={<PostDetail />} />
                 <Route path="/login" element={<Login />} />

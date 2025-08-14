@@ -87,7 +87,7 @@ export default function Header({ toggleSidebar, user }: HeaderProps) {
         <Box display="flex" alignItems="center" gap={2} ref={menuRef}>
           <Link to="/create" style={{ textDecoration: "none" }}>
             <Button variant="contained" color="error">
-              作成＋
+             ポスト
             </Button>
           </Link>
 

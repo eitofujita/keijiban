@@ -7,16 +7,20 @@ import {
   IconButton,
   Box,
   ListItemIcon,
-  ListSubheader,
   Avatar,
+  Collapse,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import HomeIcon from "@mui/icons-material/Home";
 import ForumIcon from "@mui/icons-material/Forum";
+import SettingsIcon from "@mui/icons-material/Settings";
+import ExpandLess from "@mui/icons-material/ExpandLess";
+import ExpandMore from "@mui/icons-material/ExpandMore";
 import { Link } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { useModeratedCommunities } from "../hooks/useModeratedCommunities";
+import { useState } from "react";
 
 interface Props {
   isOpen: boolean;
@@ -24,8 +28,9 @@ interface Props {
 }
 
 export default function Sidebar({ isOpen, toggleMenu }: Props) {
- const { user } = useAuth();
-const { communities, loading } = useModeratedCommunities(user?.uid);
+  const { user } = useAuth();
+  const { communities, loading } = useModeratedCommunities(user?.uid);
+  const [openMyCommunities, setOpenMyCommunities] = useState(false);
 
   return (
     <Drawer
@@ -40,6 +45,7 @@ const { communities, loading } = useModeratedCommunities(user?.uid);
         },
       }}
     >
+      {/* 閉じるボタン */}
       <Box
         sx={{
           display: "flex",
@@ -66,44 +72,75 @@ const { communities, loading } = useModeratedCommunities(user?.uid);
           </ListItemButton>
         </ListItem>
 
-        {/* Create Community */}
+        {/* マイコミュニティー（開閉式） */}
         <ListItem disablePadding>
-          <ListItemButton
-            component={Link}
-            to="/create-community"
-            onClick={toggleMenu}
-          >
+          <ListItemButton onClick={() => setOpenMyCommunities(!openMyCommunities)}>
             <ListItemIcon sx={{ color: "#bbb", minWidth: 40 }}>
-              <AddCircleOutlineIcon />
+              <ForumIcon />
             </ListItemIcon>
-            <ListItemText primary="コミュニティーを作成" />
+            <ListItemText primary="Myコミュニティー" />
+            {openMyCommunities ? <ExpandLess /> : <ExpandMore />}
           </ListItemButton>
         </ListItem>
 
-        {/* Moderation Section */}
-        {!loading && communities.length > 0 && (
-          <>
-            <ListSubheader sx={{ color: "#aaa" }}>マイコミュニティー</ListSubheader>
-            {communities.map((c) => (
-              <ListItem disablePadding key={c.slug}>
-                <ListItemButton
-                  component={Link}
-                  to={`/r/${c.slug}/mod`}
-                  onClick={toggleMenu}
-                >
-                  <ListItemIcon sx={{ color: "#bbb", minWidth: 40 }}>
-                    {c.iconUrl ? (
-                      <Avatar src={c.iconUrl} sx={{ width: 24, height: 24 }} />
-                    ) : (
-                      <ForumIcon />
-                    )}
-                  </ListItemIcon>
-                  <ListItemText primary={`r/${c.slug}`} />
-                </ListItemButton>
+        {/* 展開部分 */}
+        <Collapse in={openMyCommunities} timeout="auto" unmountOnExit>
+          <List component="div" disablePadding>
+            {/* Create Community */}
+            <ListItem disablePadding sx={{ pl: 4 }}>
+              <ListItemButton
+                component={Link}
+                to="/create-community"
+                onClick={toggleMenu}
+              >
+                <ListItemIcon sx={{ color: "#bbb", minWidth: 40 }}>
+                  <AddCircleOutlineIcon />
+                </ListItemIcon>
+                <ListItemText primary="コミュニティーを作成" />
+              </ListItemButton>
+            </ListItem>
+
+            {/* Manage Communities */}
+            <ListItem disablePadding sx={{ pl: 4 }}>
+              <ListItemButton
+                component={Link}
+                to="/manage-communities"
+                onClick={toggleMenu}
+              >
+                <ListItemIcon sx={{ color: "#bbb", minWidth: 40 }}>
+                  <SettingsIcon />
+                </ListItemIcon>
+                <ListItemText primary="設定" />
+              </ListItemButton>
+            </ListItem>
+
+            {/* コミュニティ一覧 */}
+            {!loading && communities.length > 0 ? (
+              communities.map((c) => (
+                <ListItem disablePadding key={c.slug} sx={{ pl: 4 }}>
+                  <ListItemButton
+                    component={Link}
+                    to={`/r/${c.slug}`} // ← 遷移先は /r/:slug
+                    onClick={toggleMenu}
+                  >
+                    <ListItemIcon sx={{ color: "#bbb", minWidth: 40 }}>
+                      {c.iconUrl ? (
+                        <Avatar src={c.iconUrl} sx={{ width: 24, height: 24 }} />
+                      ) : (
+                        <ForumIcon fontSize="small" />
+                      )}
+                    </ListItemIcon>
+                    <ListItemText primary={`@${c.slug}`} /> {/* 表示は @付き */}
+                  </ListItemButton>
+                </ListItem>
+              ))
+            ) : (
+              <ListItem sx={{ pl: 4 }}>
+                <ListItemText primary="なし" sx={{ color: "#777" }} />
               </ListItem>
-            ))}
-          </>
-        )}
+            )}
+          </List>
+        </Collapse>
       </List>
     </Drawer>
   );

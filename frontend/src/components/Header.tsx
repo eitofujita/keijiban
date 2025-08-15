@@ -2,14 +2,19 @@ import { useState, useRef, useEffect } from "react";
 import type { User } from "firebase/auth";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Box,
   Button,
   Avatar,
   Typography,
   Paper,
+  AppBar,
+  Toolbar,
+  IconButton,
 } from "@mui/material";
+import logo from "../assets/anime.png";
+import MenuIcon from "@mui/icons-material/Menu";
 
 type HeaderProps = {
   toggleSidebar: () => void;
@@ -19,14 +24,10 @@ type HeaderProps = {
 export default function Header({ toggleSidebar, user }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
-  const toggleMenu = () => {
-    setMenuOpen((prev) => !prev);
-  };
-
-  const handleLogout = () => {
-    signOut(auth).catch((error) => console.error(error));
-  };
+  const toggleMenu = () => setMenuOpen((prev) => !prev);
+  const handleLogout = () => signOut(auth).catch(console.error);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -34,40 +35,41 @@ export default function Header({ toggleSidebar, user }: HeaderProps) {
         setMenuOpen(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   return (
-    <Box
-      component="header"
-      sx={{
-        width: "100%",
-        backgroundColor: "#1e1e1e", // ダークカラー
-        padding: "10px 20px",
-        boxShadow: "0 2px 4px rgba(0,0,0,0.4)",
-        position: "sticky",
-        top: 0,
-        zIndex: 1000,
-      }}
-    >
-      <Box
-        display="flex"
-        alignItems="center"
-        justifyContent="space-between"
-        maxWidth="1200px"
-        margin="0 auto"
-        color="#f0f0f0"
-      >
-        {/* メニュー */}
-        <Button onClick={toggleSidebar} variant="outlined" sx={{ color: "#f0f0f0", borderColor: "#777" }}>
-          ☰
-        </Button>
+    <AppBar position="sticky" sx={{ backgroundColor: "#121212" }}>
+      <Toolbar sx={{ display: "flex", justifyContent: "space-between" }}>
+        {/* 左側 */}
+        <Box sx={{ display: "flex", alignItems: "center" }}>
+          {/* メニューアイコン */}
+          <IconButton
+          edge="start"
+          onClick={toggleSidebar}
+          sx={{ color: "#fff" }} // ← 白色に指定
+          >
+        <MenuIcon />
+        </IconButton>
+          
 
-        {/* 検索バー */}
+          {/* ロゴ */}
+          <Box
+            component="img"
+            src={logo}
+            alt="Anime Reviews Logo"
+            onClick={() => navigate("/")}
+            sx={{
+              height: 40,
+              width: "auto",
+              ml: 1,
+              cursor: "pointer",
+            }}
+          />
+        </Box>
+
+        {/* 中央：検索バー */}
         <Box component="form" onSubmit={(e) => e.preventDefault()}>
           <input
             type="text"
@@ -83,11 +85,11 @@ export default function Header({ toggleSidebar, user }: HeaderProps) {
           />
         </Box>
 
-        {/* 投稿・ログイン・プロフィール */}
+        {/* 右側：投稿ボタン & プロフィール */}
         <Box display="flex" alignItems="center" gap={2} ref={menuRef}>
           <Link to="/create" style={{ textDecoration: "none" }}>
             <Button variant="contained" color="error">
-             ポスト
+              ポスト
             </Button>
           </Link>
 
@@ -99,7 +101,6 @@ export default function Header({ toggleSidebar, user }: HeaderProps) {
                 sx={{ cursor: "pointer" }}
                 onClick={toggleMenu}
               />
-
               {menuOpen && (
                 <Paper
                   elevation={3}
@@ -144,7 +145,7 @@ export default function Header({ toggleSidebar, user }: HeaderProps) {
             </Link>
           )}
         </Box>
-      </Box>
-    </Box>
+      </Toolbar>
+    </AppBar>
   );
 }

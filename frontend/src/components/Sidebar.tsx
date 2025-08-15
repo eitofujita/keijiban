@@ -68,7 +68,7 @@ export default function Sidebar({ isOpen, toggleMenu }: Props) {
             <ListItemIcon sx={{ color: "#bbb", minWidth: 40 }}>
               <HomeIcon />
             </ListItemIcon>
-            <ListItemText primary="Home" />
+            <ListItemText primary="ホーム" />
           </ListItemButton>
         </ListItem>
 

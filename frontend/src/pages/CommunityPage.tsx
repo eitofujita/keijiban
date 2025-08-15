@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom"; // ← navigateを追加
+import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { db } from "../firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
@@ -9,15 +9,16 @@ import {
   Button,
   Card,
   CardContent,
-  Divider,
   Avatar,
   Stack,
 } from "@mui/material";
+import { Post as PostCard } from "../components/Post"; // ← 新しいPostコンポーネント
 
 // コミュニティ型
 type Community = DocumentData & {
   slug: string;
   name: string;
+  displayName?: string;
   description?: string;
   iconUrl?: string;
 };
@@ -27,18 +28,20 @@ type Post = DocumentData & {
   id: string;
   title?: string;
   content?: string;
+  username?: string;
+  timestamp?: string;
+  upvotes?: number;
 };
 
 export default function CommunityPage() {
   const { slug } = useParams();
-  const navigate = useNavigate(); // ← 追加
+  const navigate = useNavigate();
 
   const [community, setCommunity] = useState<Community | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
 
   useEffect(() => {
     const cleanSlug = slug?.replace(/^@/, "");
-    console.log("URLから取得したslug:", slug, "検索用slug:", cleanSlug);
 
     const fetchCommunity = async () => {
       if (!cleanSlug) return;
@@ -101,7 +104,7 @@ export default function CommunityPage() {
               textTransform: "none",
               fontWeight: "bold",
             }}
-            onClick={() => navigate(`/r/${slug}/create-post`)} // ← ここで遷移
+            onClick={() => navigate(`/r/${slug}/create-post`)}
           >
             ポスト
           </Button>
@@ -113,24 +116,15 @@ export default function CommunityPage() {
         <Typography sx={{ color: "#aaa" }}>まだ投稿がありません</Typography>
       ) : (
         posts.map((post) => (
-          <Card
+          <PostCard
             key={post.id}
-            sx={{
-              backgroundColor: "#1e1e1e",
-              mb: 2,
-              border: "1px solid #333",
-            }}
-          >
-            <CardContent>
-              <Typography variant="h6" sx={{ fontWeight: "bold" }}>
-                {post.title || "(No title)"}
-              </Typography>
-              <Divider sx={{ my: 1, borderColor: "#333" }} />
-              <Typography variant="body2" sx={{ color: "#ccc" }}>
-                {post.content || ""}
-              </Typography>
-            </CardContent>
-          </Card>
+            id={post.id}
+            title={post.title || "(No title)"}
+            content={post.content || ""}
+            username={post.username || "匿名"}
+            timestamp={post.timestamp || ""}
+            upvotes={post.upvotes || 0}
+          />
         ))
       )}
     </Box>

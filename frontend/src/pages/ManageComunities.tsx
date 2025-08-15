@@ -7,111 +7,161 @@ import {
   IconButton,
   TextField,
   Avatar,
+  Typography,
+  Box,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import ExitToAppIcon from "@mui/icons-material/ExitToApp";
 import EditIcon from "@mui/icons-material/Edit";
 import SaveIcon from "@mui/icons-material/Save";
 import CloseIcon from "@mui/icons-material/Close";
-import { db } from "../firebase";
-import {
-  doc,
-  updateDoc,
-  deleteDoc,
-  arrayRemove
-} from "firebase/firestore";
-import { useState } from "react";
 import ForumIcon from "@mui/icons-material/Forum";
+import { doc, updateDoc, deleteDoc, arrayRemove } from "firebase/firestore";
+import { db } from "../firebase";
+import { useState } from "react";
+
+export interface ModCommunity {
+  id: string; // Firestore document ID
+  slug: string;
+  name: string;
+  description?: string;
+  iconUrl?: string;
+}
 
 export default function ManageCommunities() {
   const { user } = useAuth();
-  const { communities, loading } = useModeratedCommunities(user?.uid);
+  const { communities, loading, refetch } = useModeratedCommunities(user?.uid);
 
   const [editName, setEditName] = useState("");
-  const [editingSlug, setEditingSlug] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
-  const handleRename = async (slug: string) => {
-    if (!editName.trim()) return;
-    await updateDoc(doc(db, "communities", slug), {
-      name: editName.trim(),
-    });
-    setEditingSlug(null);
+const handleRename = async (id: string) => {
+  if (!editName.trim()) return;
+  try {
+    await updateDoc(doc(db, "communities", id), { displayName: editName.trim() });
+
+    console.log("名前を更新:", editName.trim());
+    setEditingId(null);
     setEditName("");
-  };
+    refetch();
+  } catch (err) {
+    console.error("名前更新エラー:", err);
+    alert("名前の更新に失敗しました: " + (err as Error).message);
+  }
+};
 
-  const handleDelete = async (slug: string) => {
+  const handleDelete = async (id: string) => {
     if (!window.confirm("本当に削除しますか？")) return;
-    await deleteDoc(doc(db, "communities", slug));
+    await deleteDoc(doc(db, "communities", id));
+    refetch();
   };
 
-  const handleLeave = async (slug: string) => {
+  const handleLeave = async (id: string) => {
     if (!user) return;
     if (!window.confirm("このコミュニティから退出しますか？")) return;
-    await updateDoc(doc(db, "communities", slug), {
+    await updateDoc(doc(db, "communities", id), {
       memberIds: arrayRemove(user.uid),
       moderatorIds: arrayRemove(user.uid),
     });
+    refetch();
   };
 
-  if (loading) return <div>読み込み中...</div>;
+  if (loading) {
+    return (
+      <Typography variant="body1" sx={{ color: "#bbb", p: 2 }}>
+        読み込み中...
+      </Typography>
+    );
+  }
 
   return (
-    <div style={{ padding: "1rem" }}>
-      <h2>Manage Communities</h2>
+    <Box sx={{ p: 2 }}>
+      <Typography variant="h5" sx={{ mb: 2, color: "#fff" }}>
+        Manage Communities
+      </Typography>
       <List>
         {communities.map((c) => (
           <ListItem
-            key={c.slug}
-            sx={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+            key={c.id}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.75rem",
+              backgroundColor: "#1e1e1e",
+              borderRadius: "8px",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
+              mb: 1,
+              px: 2,
+              py: 1,
+            }}
           >
             {c.iconUrl ? (
-              <Avatar src={c.iconUrl} sx={{ width: 32, height: 32 }} />
+              <Avatar src={c.iconUrl} sx={{ width: 40, height: 40 }} />
             ) : (
-              <ForumIcon sx={{ width: 32, height: 32, color: "#bbb" }} />
+              <ForumIcon sx={{ width: 40, height: 40, color: "#90caf9" }} />
             )}
 
-            {editingSlug === c.slug ? (
+            {editingId === c.id ? (
               <>
-                <TextField
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  size="small"
-                  variant="outlined"
-                  sx={{ backgroundColor: "#fff", borderRadius: "4px" }}
-                />
-                <IconButton onClick={() => handleRename(c.slug)}>
-                  <SaveIcon sx={{ color: "#4caf50" }} /> {/* 緑 */}
-                </IconButton>
-                <IconButton onClick={() => setEditingSlug(null)}>
-                  <CloseIcon sx={{ color: "#f44336" }} /> {/* 赤 */}
-                </IconButton>
+               <TextField
+  value={editName}
+  onChange={(e) => setEditName(e.target.value)}
+  onKeyDown={(e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleRename(c.id);
+    }
+  }}
+  size="small"
+  variant="outlined"
+  sx={{
+    backgroundColor: "#2c2c2c",
+    borderRadius: "6px",
+    input: { color: "#fff" },
+    "& .MuiOutlinedInput-notchedOutline": { borderColor: "#555" },
+    "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "#90caf9" },
+    "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#42a5f5" },
+  }}
+/>
+<IconButton onClick={() => handleRename(c.id)} sx={{ color: "#4caf50" }}>
+  <SaveIcon />
+</IconButton>
+<IconButton onClick={() => setEditingId(null)} sx={{ color: "#f44336" }}>
+  <CloseIcon />
+</IconButton>
+
               </>
             ) : (
               <>
                 <ListItemText
                   primary={c.name}
-                  secondary={`r/${c.slug}`}
-                  sx={{ flex: 1 }}
+                  secondary={`@${c.slug}`}
+                  sx={{
+                    flex: 1,
+                    "& .MuiListItemText-primary": { color: "#fff" },
+                    "& .MuiListItemText-secondary": { color: "#aaa" },
+                  }}
                 />
                 <IconButton
                   onClick={() => {
-                    setEditingSlug(c.slug);
+                    setEditingId(c.id);
                     setEditName(c.name ?? "");
                   }}
+                  sx={{ color: "#90caf9" }}
                 >
-                  <EditIcon sx={{ color: "#90caf9" }} /> {/* 水色 */}
+                  <EditIcon />
                 </IconButton>
-                <IconButton onClick={() => handleLeave(c.slug)}>
-                  <ExitToAppIcon sx={{ color: "#ffb74d" }} /> {/* オレンジ */}
+                <IconButton onClick={() => handleLeave(c.id)} sx={{ color: "#ffb74d" }}>
+                  <ExitToAppIcon />
                 </IconButton>
-                <IconButton onClick={() => handleDelete(c.slug)}>
-                  <DeleteIcon sx={{ color: "#ef5350" }} /> {/* 赤 */}
+                <IconButton onClick={() => handleDelete(c.id)} sx={{ color: "#ef5350" }}>
+                  <DeleteIcon />
                 </IconButton>
               </>
             )}
           </ListItem>
         ))}
       </List>
-    </div>
+    </Box>
   );
 }

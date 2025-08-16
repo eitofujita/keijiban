@@ -35,20 +35,19 @@ export default function ManageCommunities() {
   const [editName, setEditName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
 
-const handleRename = async (id: string) => {
-  if (!editName.trim()) return;
-  try {
-    await updateDoc(doc(db, "communities", id), { displayName: editName.trim() });
-
-    console.log("名前を更新:", editName.trim());
-    setEditingId(null);
-    setEditName("");
-    refetch();
-  } catch (err) {
-    console.error("名前更新エラー:", err);
-    alert("名前の更新に失敗しました: " + (err as Error).message);
-  }
-};
+  const handleRename = async (id: string) => {
+    if (!editName.trim()) return;
+    try {
+      await updateDoc(doc(db, "communities", id), { displayName: editName.trim() });
+      console.log("名前を更新:", editName.trim());
+      setEditingId(null);
+      setEditName("");
+      refetch();
+    } catch (err) {
+      console.error("名前更新エラー:", err);
+      alert("名前の更新に失敗しました: " + (err as Error).message);
+    }
+  };
 
   const handleDelete = async (id: string) => {
     if (!window.confirm("本当に削除しますか？")) return;
@@ -68,7 +67,7 @@ const handleRename = async (id: string) => {
 
   if (loading) {
     return (
-      <Typography variant="body1" sx={{ color: "#bbb", p: 2 }}>
+      <Typography variant="body1" sx={{ color: "#bbb", p: 2, fontSize: "0.85rem" }}>
         読み込み中...
       </Typography>
     );
@@ -76,8 +75,11 @@ const handleRename = async (id: string) => {
 
   return (
     <Box sx={{ p: 2 }}>
-      <Typography variant="h5" sx={{ mb: 2, color: "#fff" }}>
-        Manage Communities
+      <Typography
+        variant="h5"
+        sx={{ mb: 2, color: "#fff", fontSize: "0.85rem", fontWeight: "bold" }}
+      >
+        コミュニティーの設定
       </Typography>
       <List>
         {communities.map((c) => (
@@ -103,33 +105,34 @@ const handleRename = async (id: string) => {
 
             {editingId === c.id ? (
               <>
-               <TextField
-  value={editName}
-  onChange={(e) => setEditName(e.target.value)}
-  onKeyDown={(e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleRename(c.id);
-    }
-  }}
-  size="small"
-  variant="outlined"
-  sx={{
-    backgroundColor: "#2c2c2c",
-    borderRadius: "6px",
-    input: { color: "#fff" },
-    "& .MuiOutlinedInput-notchedOutline": { borderColor: "#555" },
-    "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "#90caf9" },
-    "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#42a5f5" },
-  }}
-/>
-<IconButton onClick={() => handleRename(c.id)} sx={{ color: "#4caf50" }}>
-  <SaveIcon />
-</IconButton>
-<IconButton onClick={() => setEditingId(null)} sx={{ color: "#f44336" }}>
-  <CloseIcon />
-</IconButton>
-
+                <TextField
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleRename(c.id);
+                    }
+                  }}
+                  size="small"
+                  variant="outlined"
+                  sx={{
+                    backgroundColor: "#2c2c2c",
+                    borderRadius: "6px",
+                    input: { color: "#fff", fontSize: "0.85rem" },
+                    "& .MuiOutlinedInput-notchedOutline": { borderColor: "#555" },
+                    "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "#90caf9" },
+                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                      borderColor: "#42a5f5",
+                    },
+                  }}
+                />
+                <IconButton onClick={() => handleRename(c.id)} sx={{ color: "#4caf50" }}>
+                  <SaveIcon />
+                </IconButton>
+                <IconButton onClick={() => setEditingId(null)} sx={{ color: "#f44336" }}>
+                  <CloseIcon />
+                </IconButton>
               </>
             ) : (
               <>
@@ -138,8 +141,14 @@ const handleRename = async (id: string) => {
                   secondary={`@${c.slug}`}
                   sx={{
                     flex: 1,
-                    "& .MuiListItemText-primary": { color: "#fff" },
-                    "& .MuiListItemText-secondary": { color: "#aaa" },
+                    "& .MuiListItemText-primary": {
+                      color: "#fff",
+                      fontSize: "0.85rem",
+                    },
+                    "& .MuiListItemText-secondary": {
+                      color: "#aaa",
+                      fontSize: "0.75rem",
+                    },
                   }}
                 />
                 <IconButton

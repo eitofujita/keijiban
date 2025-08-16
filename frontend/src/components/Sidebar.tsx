@@ -32,6 +32,18 @@ export default function Sidebar({ isOpen, toggleMenu }: Props) {
   const { communities, loading } = useModeratedCommunities(user?.uid);
   const [openMyCommunities, setOpenMyCommunities] = useState(false);
 
+  // 共通のテキストスタイル
+  const textProps = {
+    primaryTypographyProps: {
+      sx: {
+        fontSize: "0.85rem",
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+      },
+    },
+  };
+
   return (
     <Drawer
       anchor="left"
@@ -68,17 +80,17 @@ export default function Sidebar({ isOpen, toggleMenu }: Props) {
             <ListItemIcon sx={{ color: "#bbb", minWidth: 40 }}>
               <HomeIcon />
             </ListItemIcon>
-            <ListItemText primary="ホーム" />
+            <ListItemText primary="ホーム" {...textProps} />
           </ListItemButton>
         </ListItem>
 
-        {/* マイコミュニティー（開閉式） */}
+        {/* マイコミュニティー */}
         <ListItem disablePadding>
           <ListItemButton onClick={() => setOpenMyCommunities(!openMyCommunities)}>
             <ListItemIcon sx={{ color: "#bbb", minWidth: 40 }}>
               <ForumIcon />
             </ListItemIcon>
-            <ListItemText primary="Myコミュニティー" />
+            <ListItemText primary="Myコミュニティー" {...textProps} />
             {openMyCommunities ? <ExpandLess /> : <ExpandMore />}
           </ListItemButton>
         </ListItem>
@@ -96,7 +108,7 @@ export default function Sidebar({ isOpen, toggleMenu }: Props) {
                 <ListItemIcon sx={{ color: "#bbb", minWidth: 40 }}>
                   <AddCircleOutlineIcon />
                 </ListItemIcon>
-                <ListItemText primary="コミュニティーを作成" />
+                <ListItemText primary="コミュニティーを作成" {...textProps} />
               </ListItemButton>
             </ListItem>
 
@@ -110,7 +122,7 @@ export default function Sidebar({ isOpen, toggleMenu }: Props) {
                 <ListItemIcon sx={{ color: "#bbb", minWidth: 40 }}>
                   <SettingsIcon />
                 </ListItemIcon>
-                <ListItemText primary="設定" />
+                <ListItemText primary="設定" {...textProps} />
               </ListItemButton>
             </ListItem>
 
@@ -120,7 +132,7 @@ export default function Sidebar({ isOpen, toggleMenu }: Props) {
                 <ListItem disablePadding key={c.slug} sx={{ pl: 4 }}>
                   <ListItemButton
                     component={Link}
-                    to={`/r/${c.slug}`} // ← 遷移先は /r/:slug
+                    to={`/r/${c.slug}`}
                     onClick={toggleMenu}
                   >
                     <ListItemIcon sx={{ color: "#bbb", minWidth: 40 }}>
@@ -130,13 +142,13 @@ export default function Sidebar({ isOpen, toggleMenu }: Props) {
                         <ForumIcon fontSize="small" />
                       )}
                     </ListItemIcon>
-                    <ListItemText primary={`@${c.slug}`} /> {/* 表示は @付き */}
+                    <ListItemText primary={`@${c.slug}`} {...textProps} />
                   </ListItemButton>
                 </ListItem>
               ))
             ) : (
               <ListItem sx={{ pl: 4 }}>
-                <ListItemText primary="なし" sx={{ color: "#777" }} />
+                <ListItemText primary="なし" sx={{ color: "#777" }} {...textProps} />
               </ListItem>
             )}
           </List>

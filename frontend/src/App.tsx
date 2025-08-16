@@ -16,6 +16,7 @@ import CreateCommunity from "./pages/CreateCommunity";
 import ManageCommunities from "./pages/ManageComunities";
 import CommunityPage from "./pages/CommunityPage";
 import CreatePostPage from "./pages/CreatePostPage";
+import { AuthProvider } from "./contexts/AuthContext";
 
 
 const darkishTheme = createTheme({
@@ -71,17 +72,19 @@ function App() {
           <div style={{ display: "flex", flex: 1 }}>
             <Sidebar isOpen={isSidebarOpen} toggleMenu={toggleSidebar} />
             <main style={{ flex: 1, padding: "1rem" }}>
+              <AuthProvider>
               <Routes>
-                <Route path="/" element={<Home user={user} />} />
+                <Route path="/" element={<Home />} />
                 <Route path="/create" element={<Create />} />
-                 <Route path="/create-community" element={<CreateCommunity />} />
-                 <Route path="/manage-communities" element={<ManageCommunities />} />
-                 <Route path="/r/:slug" element={<CommunityPage />} />
-                 <Route path="/r/:slug/create-post" element={<CreatePostPage />} />
+                <Route path="/create-community" element={<CreateCommunity />} />
+                <Route path="/manage-communities" element={<ManageCommunities />} />
+                <Route path="/r/:slug" element={<CommunityPage />} />
+                <Route path="/r/:slug/create-post" element={<CreatePostPage />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/post/:id" element={<PostDetail />} />
                 <Route path="/login" element={<Login />} />
               </Routes>
+              </AuthProvider>
             </main>
           </div>
         </div>

@@ -4,18 +4,23 @@ import { useNavigate } from "react-router-dom";
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, Switch, FormControlLabel,
-  Button, Box, Typography, Stack, Alert
+  Button, Box, Typography, Stack, Alert, Avatar
 } from "@mui/material";
-import { addDoc, collection, serverTimestamp, getDocs, query, where, limit } from "firebase/firestore";
+import {
+  addDoc, collection, serverTimestamp, getDocs, query, where, limit
+} from "firebase/firestore";
 import { db } from "../firebase";
 import { useAuth } from "../hooks/useAuth";
+
+// 🔹 Storage 用
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const NAME_MAX = 50;
 const DESC_MAX = 500;
 
 // 半角英数字と _- のみ。先頭は英字。
-const nameToSlug = (name: string) =>
-  name.trim();
+const nameToSlug = (name: string) => name.trim();
+
 export default function CreateCommunity() {
   const { user } = useAuth();
   const nav = useNavigate();
@@ -26,6 +31,18 @@ export default function CreateCommunity() {
   const [showOnProfile, setShowOnProfile] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // 🔹 アイコンアップロード用 state
+  const [iconFile, setIconFile] = useState<File | null>(null);
+  const [iconPreview, setIconPreview] = useState<string | null>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setIconFile(file);
+      setIconPreview(URL.createObjectURL(file));
+    }
+  };
 
   const slug = useMemo(() => nameToSlug(name), [name]);
   const nameLen = name.trim().length;
@@ -58,6 +75,18 @@ export default function CreateCommunity() {
         return;
       }
 
+      let iconUrl = user?.photoURL || "";
+
+      // 🔹 Storage にアップロード（拡張子付き）
+      if (iconFile) {
+        const storage = getStorage();
+        const ext = iconFile.name.split(".").pop(); // jpg, png など
+        const fileName = `${slug}_${Date.now()}.${ext}`;
+        const storageRef = ref(storage, `communityIcons/${fileName}`);
+        await uploadBytes(storageRef, iconFile);
+        iconUrl = await getDownloadURL(storageRef);
+      }
+
       await addDoc(collection(db, "communities"), {
         slug,
         displayName: name.trim(),
@@ -65,14 +94,16 @@ export default function CreateCommunity() {
         isPrivate,
         showOnProfile,
         ownerUid: user!.uid,
-        moderatorIds: [user!.uid],  
-        memberIds: [user!.uid],  
+        moderatorIds: [user!.uid],
+        memberIds: [user!.uid],
         createdAt: serverTimestamp(),
         membersCount: 1,
+        iconUrl, // 🔹 Storage の URL か photoURL
       });
 
-      close(); 
+      close();
     } catch (e: any) {
+      console.error("🔥 Upload/CreateCommunity error:", e);
       setError(e?.message ?? "作成に失敗しました。時間をおいて再度お試しください。");
     } finally {
       setSubmitting(false);
@@ -82,19 +113,19 @@ export default function CreateCommunity() {
   return (
     <Dialog open onClose={close} fullWidth maxWidth="sm"
       PaperProps={{ sx: { backgroundColor: "#1e1e1e", color: "#fff" } }}>
-      <DialogTitle sx={{ fontWeight: 800 }}>Create community</DialogTitle>
+      <DialogTitle sx={{ fontWeight: 800 }}>コミュニティーを作成</DialogTitle>
 
       <DialogContent dividers sx={{ borderColor: "#333" }}>
         <Stack spacing={2}>
           <Box>
             <Typography variant="subtitle2" sx={{ mb: 0.5, color: "#cfd8dc" }}>
-              Name<span style={{ color: "#ef5350" }}>*</span>
+              名前<span style={{ color: "#ef5350" }}>*</span>
             </Typography>
             <TextField
               fullWidth
               value={name}
               onChange={(e) => setName(e.target.value.slice(0, NAME_MAX))}
-              placeholder="例: myboard"
+              placeholder="例: アニメ研究"
               helperText={`${nameLen}/${NAME_MAX}`}
               InputProps={{ sx: { color: "#fff" } }}
               FormHelperTextProps={{ sx: { textAlign: "right", color: "#90a4ae" } }}
@@ -108,7 +139,7 @@ export default function CreateCommunity() {
 
           <Box>
             <Typography variant="subtitle2" sx={{ mb: 0.5, color: "#cfd8dc" }}>
-              Description
+              説明
             </Typography>
             <TextField
               fullWidth
@@ -123,6 +154,22 @@ export default function CreateCommunity() {
             />
           </Box>
 
+          {/* 🔹 アイコンアップロード */}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <Avatar
+              src={iconPreview || ""}
+              sx={{ width: 56, height: 56, bgcolor: "#444" }}
+            />
+            <Button
+              variant="contained"
+              component="label"
+              sx={{ bgcolor: "#555", "&:hover": { bgcolor: "#777" } }}
+            >
+              アイコンをアップロード
+              <input type="file" hidden accept="image/*" onChange={handleFileChange} />
+            </Button>
+          </Box>
+
           <FormControlLabel
             control={
               <Switch
@@ -132,9 +179,9 @@ export default function CreateCommunity() {
             }
             label={
               <Box>
-                <Typography sx={{ color: "#fff" }}>Make private</Typography>
+                <Typography sx={{ color: "#fff" }}>非公開にする</Typography>
                 <Typography variant="caption" sx={{ color: "#90a4ae" }}>
-                  Only viewable by you（将来は招待制などに拡張可）
+                  将来は招待制などに拡張可
                 </Typography>
               </Box>
             }
@@ -149,7 +196,7 @@ export default function CreateCommunity() {
             }
             label={
               <Box>
-                <Typography sx={{ color: "#fff" }}>Show on profile</Typography>
+                <Typography sx={{ color: "#fff" }}>プロフィールを表示</Typography>
                 <Typography variant="caption" sx={{ color: "#90a4ae" }}>
                   あなたのプロフィールに表示します
                 </Typography>
@@ -163,14 +210,14 @@ export default function CreateCommunity() {
 
       <DialogActions sx={{ p: 2 }}>
         <Button onClick={close} disabled={submitting} sx={{ color: "#cfd8dc" }}>
-          Cancel
+          キャンセル
         </Button>
         <Button
           variant="contained"
           onClick={handleSubmit}
           disabled={!canSubmit || submitting}
         >
-          Submit
+          作成
         </Button>
       </DialogActions>
     </Dialog>

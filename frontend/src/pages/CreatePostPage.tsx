@@ -1,3 +1,5 @@
+// src/pages/CreatePostPage.tsx
+
 import { useParams, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { db } from "../firebase";
@@ -10,26 +12,33 @@ import {
   TextField,
   Button,
 } from "@mui/material";
+import { useAuth } from "../hooks/useAuth"; // ✅ ユーザー情報取得
 
 export default function CreatePostPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth(); // ✅ ユーザーオブジェクトとローディング状態
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!slug) return;
+
+    // 認証されていない、またはslugがない場合は早期リターン
+    if (!slug || !user) return;
 
     try {
       await addDoc(collection(db, "posts"), {
-        communitySlug: slug, // コミュニティを紐付け
+        communitySlug: slug,
         title,
         content,
-        createdAt: serverTimestamp(),
+        uid: user.uid,                            // ✅ 投稿者のUID
+        username: user.displayName || "",     // ✅ 投稿者名
+        avatarUrl: user.photoURL || "",
+        timestamp: serverTimestamp(),             // ✅ 投稿時間
       });
-      navigate(`/r/${slug}`); // 作成後にそのコミュニティページへ戻る
+      navigate(`/r/${slug}`); // 投稿完了後、コミュニティページへリダイレクト
     } catch (error) {
       console.error("投稿エラー:", error);
     }

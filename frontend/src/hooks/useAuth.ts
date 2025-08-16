@@ -1,20 +1,36 @@
 import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "../firebase";
+import { auth, db } from "../firebase"; // ← db を追加
+import { doc, setDoc, serverTimestamp } from "firebase/firestore"; // ← Firestore の関数を追加
 import type { User } from "firebase/auth";
 
 export const useAuth = () => {
-  const [user, setUser] = useState<User | null>(null);       // ユーザー情報
-  const [loading, setLoading] = useState(true);              // ローディング状態を追加
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
-      setLoading(false); // ロード完了
+      setLoading(false);
+
+      if (user) {
+        // ✅ Firestore にユーザー情報を保存（または更新）
+        const userRef = doc(db, "users", user.uid);
+        await setDoc(
+          userRef,
+          {
+            displayName: user.displayName || "",
+            avatarUrl: user.photoURL || "",
+            email: user.email || "",
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true } // ← 既存のフィールドを上書きしない
+        );
+      }
     });
 
-    return unsubscribe; // クリーンアップ
+    return unsubscribe;
   }, []);
 
-  return { user, loading }; // オブジェクトで返す（←重要）
+  return { user, loading };
 };

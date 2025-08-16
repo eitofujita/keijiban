@@ -1,47 +1,76 @@
-import { Post } from "../components/Post";
-import type { User } from "firebase/auth";
-import { Container, Typography, Box } from "@mui/material";
+// src/pages/Home.tsx
+import { useEffect, useState } from "react";
+import { db } from "../firebase";
+import { collection, query, getDocs, orderBy } from "firebase/firestore";
+import type { DocumentData, Timestamp } from "firebase/firestore";
+import { Box, Typography } from "@mui/material";
+import { Post as PostCard } from "../components/Post";
 
-const posts = [
-  {
-    id: "1",
-    title: "はじめての投稿",
-    content: "これは最初の投稿です！",
-    upvotes: 10,
-    username: "r/myboard",
-    timestamp: "2 hours ago"
-  },
-  {
-    id: "2",
-    title: "別の投稿",
-    content: "こんにちは",
-    upvotes: 3,
-    username: "r/guestuser",
-    timestamp: "5 minutes ago"
-  }
-];
-
-type HomeProps = {
-  user: User | null;
+// 投稿型
+type Post = DocumentData & {
+  id: string;
+  title?: string;
+  content?: string;
+  username?: string;
+  avatarUrl?: string;
+  communitySlug?: string;
+  timestamp?: Timestamp;
+  upvotes?: number;
 };
 
-const Home = ({ user: _user }: HomeProps) => {
-  return (
-    <Box sx={{ backgroundColor: "#121212", minHeight: "100vh", py: 4 }}>
-      <Container maxWidth="md">
-        <Typography
-          variant="h4"
-          sx={{ color: "#ffffff", fontWeight: "bold", mb: 4 }}
-        >
-          投稿一覧
-        </Typography>
+export default function Home() {
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
 
-        {posts.map((p) => (
-          <Post key={p.id} {...p} />
-        ))}
-      </Container>
+  useEffect(() => {
+    const fetchPosts = async () => {
+      setLoading(true);
+
+      const q = query(
+        collection(db, "posts"),
+        orderBy("timestamp", "desc") // 新しい順
+      );
+      const snapshot = await getDocs(q);
+
+      setPosts(
+        snapshot.docs.map(
+          (doc) => ({ id: doc.id, ...doc.data() } as Post)
+        )
+      );
+      setLoading(false);
+    };
+
+    fetchPosts();
+  }, []);
+
+  return (
+    <Box sx={{ maxWidth: 900, mx: "auto", p: 2, color: "#fff" }}>
+      <Typography variant="h4" sx={{ mb: 2 }}>
+        最新の投稿
+      </Typography>
+
+      {loading ? (
+        <Typography sx={{ color: "#aaa" }}>読み込み中...</Typography>
+      ) : posts.length === 0 ? (
+        <Typography sx={{ color: "#aaa" }}>まだ投稿がありません</Typography>
+      ) : (
+        posts.map((post) => (
+          <PostCard
+            key={post.id}
+            id={post.id}
+            title={post.title || "(No title)"}
+            content={post.content || ""}
+            username={post.username || "名無し"}
+            avatarUrl={post.avatarUrl || ""}
+            timestamp={
+              post.timestamp ? post.timestamp.toDate().toLocaleString() : ""
+            }
+            upvotes={post.upvotes || 0}
+            
+            communitySlug={post.communitySlug || ""}
+          />
+        ))
+      )}
     </Box>
   );
-};
-
-export default Home;
+}

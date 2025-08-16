@@ -1,8 +1,8 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { db } from "../firebase";
-import { collection, query, where, getDocs } from "firebase/firestore";
-import type { DocumentData } from "firebase/firestore";
+import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
+import type { DocumentData, Timestamp } from "firebase/firestore";
 import {
   Box,
   Typography,
@@ -12,7 +12,7 @@ import {
   Avatar,
   Stack,
 } from "@mui/material";
-import { Post as PostCard } from "../components/Post"; // ← 新しいPostコンポーネント
+import { Post as PostCard } from "../components/Post";
 
 // コミュニティ型
 type Community = DocumentData & {
@@ -29,7 +29,8 @@ type Post = DocumentData & {
   title?: string;
   content?: string;
   username?: string;
-  timestamp?: string;
+  avatarUrl?: string; 
+  timestamp?: Timestamp;
   upvotes?: number;
 };
 
@@ -55,7 +56,11 @@ export default function CommunityPage() {
 
     const fetchPosts = async () => {
       if (!cleanSlug) return;
-      const q = query(collection(db, "posts"), where("communitySlug", "==", cleanSlug));
+      const q = query(
+        collection(db, "posts"),
+        where("communitySlug", "==", cleanSlug),
+        orderBy("timestamp", "desc") // ← 新しい順
+      );
       const querySnapshot = await getDocs(q);
       setPosts(
         querySnapshot.docs.map(
@@ -117,14 +122,21 @@ export default function CommunityPage() {
       ) : (
         posts.map((post) => (
           <PostCard
-            key={post.id}
-            id={post.id}
-            title={post.title || "(No title)"}
-            content={post.content || ""}
-            username={post.username || "匿名"}
-            timestamp={post.timestamp || ""}
+          key={post.id}
+          id={post.id}
+          title={post.title || "(No title)"}
+          content={post.content || ""}
+          username={post.username || ""}
+          avatarUrl={post.avatarUrl || ""}
+          timestamp={
+             post.timestamp
+             ? post.timestamp.toDate().toLocaleString()
+             : ""
+         }
             upvotes={post.upvotes || 0}
-          />
+        />
+
+          
         ))
       )}
     </Box>

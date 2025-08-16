@@ -48,7 +48,7 @@ export default function Header({ toggleSidebar, user }: HeaderProps) {
           <IconButton
           edge="start"
           onClick={toggleSidebar}
-          sx={{ color: "#fff" }} // ← 白色に指定
+          sx={{ color: "#fff", mr: 2 }} 
           >
         <MenuIcon />
         </IconButton>

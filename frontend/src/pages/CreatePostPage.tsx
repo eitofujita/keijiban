@@ -1,9 +1,9 @@
-// src/pages/CreatePostPage.tsx
+
 
 import { useParams, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { db } from "../firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, query, where, getDocs } from "firebase/firestore";
 import {
   Container,
   Paper,
@@ -12,33 +12,49 @@ import {
   TextField,
   Button,
 } from "@mui/material";
-import { useAuth } from "../hooks/useAuth"; // ✅ ユーザー情報取得
+import { useAuth } from "../hooks/useAuth";
 
 export default function CreatePostPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth(); // ✅ ユーザーオブジェクトとローディング状態
+  const { user } = useAuth();
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [community, setCommunity] = useState<any>(null);
+
+ 
+  useEffect(() => {
+    const fetchCommunity = async () => {
+      if (!slug) return;
+      const q = query(collection(db, "communities"), where("slug", "==", slug));
+      const snapshot = await getDocs(q);
+      if (!snapshot.empty) {
+        setCommunity(snapshot.docs[0].data());
+      }
+    };
+    fetchCommunity();
+  }, [slug]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 認証されていない、またはslugがない場合は早期リターン
-    if (!slug || !user) return;
+    if (!slug || !user || !community) return; 
 
     try {
       await addDoc(collection(db, "posts"), {
         communitySlug: slug,
+        communityName: community.displayName,      
+        communityIcon: community.iconUrl || "", 
         title,
         content,
-        uid: user.uid,                            // ✅ 投稿者のUID
-        username: user.displayName || "",     // ✅ 投稿者名
+        uid: user.uid,
+        username: user.displayName || "",
         avatarUrl: user.photoURL || "",
-        timestamp: serverTimestamp(),             // ✅ 投稿時間
+        timestamp: serverTimestamp(),
+        commentsCount: 0,
       });
-      navigate(`/r/${slug}`); // 投稿完了後、コミュニティページへリダイレクト
+      navigate(`/r/${slug}`);
     } catch (error) {
       console.error("投稿エラー:", error);
     }
@@ -57,7 +73,7 @@ export default function CreatePostPage() {
         }}
       >
         <Typography variant="h5" sx={{ mb: 3 }}>
-          新しい投稿を作成（@{slug}）
+          {community ? `新しい投稿を作成（r/${community.name}）` : "読み込み中..."}
         </Typography>
 
         <Box component="form" onSubmit={handleSubmit} noValidate>
@@ -99,7 +115,7 @@ export default function CreatePostPage() {
             }}
           />
 
-          <Button type="submit" variant="contained" color="primary" fullWidth>
+          <Button type="submit" variant="contained" color="primary" fullWidth disabled={!community}>
             投稿する
           </Button>
         </Box>

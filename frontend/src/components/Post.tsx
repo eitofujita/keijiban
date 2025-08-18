@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+
 import {
   Card,
   CardHeader,
@@ -6,19 +7,17 @@ import {
   Avatar,
   Typography,
   IconButton,
-  TextField,
-  Button,
   Box,
-  List,
-  ListItem,
-  ListItemText,
 } from "@mui/material";
 import ThumbUpIcon from "@mui/icons-material/ThumbUp";
 import ThumbDownIcon from "@mui/icons-material/ThumbDown";
 import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
-
+import { useState, useEffect } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { useModeratedCommunities } from "../hooks/useModeratedCommunities";
+import { Link } from "react-router-dom";
+import { db } from "../firebase"; // 🔹 Firestore 初期化
+import { doc, onSnapshot } from "firebase/firestore";
 
 type PostProps = {
   id: string;
@@ -28,10 +27,12 @@ type PostProps = {
   username: string;
   timestamp: string;
   communitySlug?: string;
-  avatarUrl?: string; // 🔹 Firestore に保存された投稿者のプロフィール画像
+  avatarUrl?: string;
+  commentsCount?: number;
 };
 
 export const Post = ({
+  id,
   title,
   content,
   upvotes,
@@ -39,16 +40,26 @@ export const Post = ({
   timestamp,
   communitySlug,
   avatarUrl,
+  commentsCount = 0,
 }: PostProps) => {
   const [likes, setLikes] = useState(upvotes);
   const [dislikes, setDislikes] = useState(0);
   const [hasLiked, setHasLiked] = useState(false);
   const [hasDisliked, setHasDisliked] = useState(false);
-  const [comments, setComments] = useState<string[]>([]);
-  const [commentText, setCommentText] = useState("");
+  const [commentCount, setCommentCount] = useState(commentsCount); // 🔹 state管理
 
   const { user } = useAuth();
   const { communities, loading } = useModeratedCommunities(user?.uid);
+
+  // 🔹 Firestore のコメント数をリアルタイム購読
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, "posts", id), (docSnap) => {
+      if (docSnap.exists()) {
+        setCommentCount(docSnap.data().commentsCount || 0);
+      }
+    });
+    return () => unsub();
+  }, [id]);
 
   // 🔹 投稿のコミュニティ名を取得
   const communityName = !loading
@@ -83,13 +94,6 @@ export const Post = ({
     }
   };
 
-  const handleAddComment = () => {
-    if (commentText.trim() !== "") {
-      setComments([...comments, commentText]);
-      setCommentText("");
-    }
-  };
-
   return (
     <Card
       sx={{
@@ -104,7 +108,7 @@ export const Post = ({
       <CardHeader
         avatar={
           <Avatar
-            src={avatarUrl || undefined} // 🔹 Firestore の avatarUrl を利用
+            src={avatarUrl || undefined}
             sx={{ width: 32, height: 32, bgcolor: "#555" }}
           >
             {!avatarUrl && username.charAt(0).toUpperCase()}
@@ -121,24 +125,21 @@ export const Post = ({
             >
               {username}
             </Typography>
-
-            {/* 🔹 投稿の所属コミュニティ名を表示 */}
-            {communitySlug && (
-        <Typography
-         variant="body2"
-          sx={{
-          color: "#90caf9",
-          fontSize: "0.75rem",
-          backgroundColor: "#2c2c2c",
-          px: 1,
-          py: 0.2,
-          borderRadius: "8px",
-         }}
-  >
-    @{communitySlug}
-  </Typography>
-)}
-            
+            {communityName && (
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "#90caf9",
+                  fontSize: "0.75rem",
+                  backgroundColor: "#2c2c2c",
+                  px: 1,
+                  py: 0.2,
+                  borderRadius: "8px",
+                }}
+              >
+                @{communityName}
+              </Typography>
+            )}
           </Box>
         }
         subheader={
@@ -163,16 +164,15 @@ export const Post = ({
           {content}
         </Typography>
 
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.25 }}>
+        
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1.25 }}>
           <IconButton
             onClick={handleLike}
             aria-label="like"
             sx={{ color: hasLiked ? "#1976d2" : "#bbb", p: 0.5 }}
           >
             <ThumbUpIcon fontSize="small" />
-            <Typography
-              sx={{ ml: 0.5, color: "inherit", fontSize: "0.9rem" }}
-            >
+            <Typography sx={{ ml: 0.5, color: "inherit", fontSize: "0.9rem" }}>
               {likes}
             </Typography>
           </IconButton>
@@ -183,78 +183,27 @@ export const Post = ({
             sx={{ color: hasDisliked ? "#d32f2f" : "#bbb", p: 0.5 }}
           >
             <ThumbDownIcon fontSize="small" />
-            <Typography
-              sx={{ ml: 0.5, color: "inherit", fontSize: "0.9rem" }}
-            >
+            <Typography sx={{ ml: 0.5, color: "inherit", fontSize: "0.9rem" }}>
               {dislikes}
             </Typography>
           </IconButton>
 
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              color: "#bbb",
-              ml: 0.5,
-            }}
+          {/* コメントページへのリンク */}
+          <IconButton
+            component={Link}
+            to={`/post/${id}/comments`}
+            sx={{ color: "#bbb", p: 0.5 }}
           >
-            <ChatBubbleOutlineIcon sx={{ mr: 0.5 }} fontSize="small" />
-            <Typography sx={{ fontSize: "0.9rem" }}>
-              {comments.length}
+            <ChatBubbleOutlineIcon fontSize="small" />
+            <Typography sx={{ ml: 0.5, color: "inherit", fontSize: "0.9rem" }}>
+              {commentCount ?? 0}
             </Typography>
-          </Box>
+          </IconButton>
         </Box>
-
-        <Box sx={{ display: "flex", gap: 0.75, mb: 1 }}>
-          <TextField
-            variant="outlined"
-            size="small"
-            fullWidth
-            value={commentText}
-            onChange={(e) => setCommentText(e.target.value)}
-            placeholder="コメントを入力..."
-            sx={{
-              "& .MuiInputBase-input": {
-                color: "white",
-                fontSize: "0.9rem",
-                py: 0.9,
-              },
-              "& .MuiOutlinedInput-root": {
-                "& fieldset": { borderColor: "#555" },
-                "&:hover fieldset": { borderColor: "#888" },
-              },
-            }}
-          />
-          <Button
-            variant="contained"
-            color="success"
-            onClick={handleAddComment}
-            sx={{
-              fontSize: "0.8rem",
-              py: 0.75,
-              px: 1.5,
-              whiteSpace: "nowrap",
-            }}
-          >
-            投稿
-          </Button>
-        </Box>
-
-        <List dense>
-          {comments.map((c, i) => (
-            <ListItem key={i} disablePadding>
-              <ListItemText
-                primary={`・${c}`}
-                primaryTypographyProps={{
-                  sx: { color: "#ccc", fontSize: "0.9rem" },
-                }}
-              />
-            </ListItem>
-          ))}
-        </List>
       </CardContent>
     </Card>
   );
 };
 
 export default Post;
+

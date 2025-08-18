@@ -6,6 +6,8 @@ import type { DocumentData, Timestamp } from "firebase/firestore";
 import { Box, Typography } from "@mui/material";
 import { Post as PostCard } from "../components/Post";
 
+
+
 // 投稿型
 type Post = DocumentData & {
   id: string;

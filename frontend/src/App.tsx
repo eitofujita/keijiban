@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
 import Home from './pages/Home';
-import PostDetail from './pages/PostDetail';
+
 import Login from "./components/Login";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./firebase";
@@ -17,7 +17,7 @@ import ManageCommunities from "./pages/ManageComunities";
 import CommunityPage from "./pages/CommunityPage";
 import CreatePostPage from "./pages/CreatePostPage";
 import { AuthProvider } from "./contexts/AuthContext";
-
+import CommentPage from "./pages/CommentPage";
 
 const darkishTheme = createTheme({
   palette: {
@@ -78,10 +78,10 @@ function App() {
                 <Route path="/create" element={<Create />} />
                 <Route path="/create-community" element={<CreateCommunity />} />
                 <Route path="/manage-communities" element={<ManageCommunities />} />
+                <Route path="/post/:id/comments" element={<CommentPage />} />
                 <Route path="/r/:slug" element={<CommunityPage />} />
                 <Route path="/r/:slug/create-post" element={<CreatePostPage />} />
                 <Route path="/profile" element={<Profile />} />
-                <Route path="/post/:id" element={<PostDetail />} />
                 <Route path="/login" element={<Login />} />
               </Routes>
               </AuthProvider>

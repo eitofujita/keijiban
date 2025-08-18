@@ -24,6 +24,8 @@ import {
   query,
   orderBy,
   deleteDoc,
+  updateDoc,
+  increment,
 } from "firebase/firestore";
 import { useAuth } from "../hooks/useAuth";
 
@@ -49,9 +51,10 @@ export default function CommentPage() {
   useEffect(() => {
     if (!id) return;
     const q = query(
-      collection(db, "posts", id, "comments"),
-      orderBy("timestamp", "desc")
+      collection(db, "posts", id, "comments"), // ✅ サブコレクションに統一
+      orderBy("createdAt", "desc")
     );
+
     const unsub = onSnapshot(q, (snapshot) => {
       setComments(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
     });
@@ -63,12 +66,16 @@ export default function CommentPage() {
     if (!user || !comment.trim()) return;
 
     await addDoc(collection(db, "posts", id!, "comments"), {
-      text: comment,
-      user: user.displayName,
-      avatar: user.photoURL,
+      text: comment.trim(),
+      username: user.displayName || "名無し",
+      avatarUrl: user.photoURL || "", // ✅ avatar 保存
       uid: user.uid,
-      timestamp: serverTimestamp(),
+      createdAt: serverTimestamp(),
     });
+
+    // 🔹 コメント数を1増やす
+    const postRef = doc(db, "posts", id!);
+    await updateDoc(postRef, { commentsCount: increment(1) });
 
     setComment("");
   };
@@ -76,8 +83,11 @@ export default function CommentPage() {
   // 🔹 コメント削除
   const handleDelete = async (commentId: string) => {
     if (!id) return;
-      await deleteDoc(doc(db, "posts", id, "comments", commentId));
-    
+    await deleteDoc(doc(db, "posts", id, "comments", commentId)); // ✅ サブコレクション削除
+
+    // 🔹 コメント数を1減らす
+    const postRef = doc(db, "posts", id);
+    await updateDoc(postRef, { commentsCount: increment(-1) });
   };
 
   if (!post) return <Typography>Loading...</Typography>;
@@ -102,7 +112,8 @@ export default function CommentPage() {
             </Typography>
             <Typography variant="body2" sx={{ color: "#aaa" }}>
               {post.username} ・{" "}
-              {new Date(post.timestamp?.seconds * 1000).toLocaleString()}
+              {post.timestamp?.seconds &&
+                new Date(post.timestamp.seconds * 1000).toLocaleString()}
             </Typography>
           </Box>
         </Box>
@@ -156,10 +167,10 @@ export default function CommentPage() {
             key={c.id}
             sx={{ display: "flex", alignItems: "center", mb: 2 }}
           >
-            <Avatar src={c.avatar} sx={{ mr: 1 }} />
+            <Avatar src={c.avatarUrl} sx={{ mr: 1 }} />
             <Box sx={{ flexGrow: 1 }}>
               <Typography sx={{ fontWeight: "bold", fontSize: "0.9rem" }}>
-                {c.user}
+                {c.username}
               </Typography>
               <Typography variant="body2" sx={{ color: "#ccc" }}>
                 {c.text}

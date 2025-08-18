@@ -30,7 +30,7 @@ export default function CommentForm({ postId }: CommentFormProps) {
 
     setLoading(true);
     try {
-      await addDoc(collection(db, "posts", postId, "comments"), {
+      await addDoc(collection(db, "posts",  postId, "comments"), {
         text: comment.trim(),
         userId: user.uid,
         username: user.displayName || "名無し",

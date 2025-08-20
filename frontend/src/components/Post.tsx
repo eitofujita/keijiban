@@ -1,5 +1,3 @@
-
-
 import {
   Card,
   CardHeader,
@@ -16,8 +14,15 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { useModeratedCommunities } from "../hooks/useModeratedCommunities";
 import { Link } from "react-router-dom";
-import { db } from "../firebase"; // 🔹 Firestore 初期化
-import { doc, onSnapshot } from "firebase/firestore";
+import { db } from "../firebase";
+import {
+  doc,
+  onSnapshot,
+  updateDoc,
+  arrayUnion,
+  arrayRemove,
+  increment,
+} from "firebase/firestore";
 
 type PostProps = {
   id: string;
@@ -42,57 +47,85 @@ export const Post = ({
   avatarUrl,
   commentsCount = 0,
 }: PostProps) => {
-  const [likes, setLikes] = useState(upvotes);
-  const [dislikes, setDislikes] = useState(0);
-  const [hasLiked, setHasLiked] = useState(false);
-  const [hasDisliked, setHasDisliked] = useState(false);
-  const [commentCount, setCommentCount] = useState(commentsCount); // 🔹 state管理
-
   const { user } = useAuth();
   const { communities, loading } = useModeratedCommunities(user?.uid);
 
-  // 🔹 Firestore のコメント数をリアルタイム購読
+  const [likes, setLikes] = useState(upvotes);
+  const [dislikes, setDislikes] = useState(0);
+  const [commentCount, setCommentCount] = useState(commentsCount);
+
+  // ✅ 自分がいいね／バッドしているかどうか
+  const [hasLiked, setHasLiked] = useState(false);
+  const [hasDisliked, setHasDisliked] = useState(false);
+
+  // 🔹 Firestoreを購読
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "posts", id), (docSnap) => {
       if (docSnap.exists()) {
-        setCommentCount(docSnap.data().commentsCount || 0);
+        const data = docSnap.data();
+        setLikes(data.likes ?? 0);
+        setDislikes(data.dislikes ?? 0);
+        setCommentCount(data.commentsCount ?? 0);
+        if (user) {
+          setHasLiked(data.likedBy?.includes(user.uid));
+          setHasDisliked(data.dislikedBy?.includes(user.uid));
+        }
       }
     });
     return () => unsub();
-  }, [id]);
+  }, [id, user]);
 
-  // 🔹 投稿のコミュニティ名を取得
+  // 🔹 いいね処理（トグル式）
+  const handleLike = async () => {
+    if (!user) return;
+    const postRef = doc(db, "posts", id);
+
+    if (hasLiked) {
+      // 取り消す
+      await updateDoc(postRef, {
+        likes: increment(-1),
+        likedBy: arrayRemove(user.uid),
+      });
+    } else {
+      // いいねを追加
+      await updateDoc(postRef, {
+        likes: increment(1),
+        likedBy: arrayUnion(user.uid),
+        ...(hasDisliked && {
+          dislikes: increment(-1),
+          dislikedBy: arrayRemove(user.uid),
+        }),
+      });
+    }
+  };
+
+  // 🔹 バッド処理（トグル式）
+  const handleDislike = async () => {
+    if (!user) return;
+    const postRef = doc(db, "posts", id);
+
+    if (hasDisliked) {
+      // 取り消す
+      await updateDoc(postRef, {
+        dislikes: increment(-1),
+        dislikedBy: arrayRemove(user.uid),
+      });
+    } else {
+      // バッドを追加
+      await updateDoc(postRef, {
+        dislikes: increment(1),
+        dislikedBy: arrayUnion(user.uid),
+        ...(hasLiked && {
+          likes: increment(-1),
+          likedBy: arrayRemove(user.uid),
+        }),
+      });
+    }
+  };
+
   const communityName = !loading
     ? communities.find((c) => c.slug === communitySlug)?.name || ""
     : "";
-
-  const handleLike = () => {
-    if (hasLiked) {
-      setLikes((prev) => prev - 1);
-      setHasLiked(false);
-    } else {
-      setLikes((prev) => prev + 1);
-      setHasLiked(true);
-      if (hasDisliked) {
-        setDislikes((prev) => prev - 1);
-        setHasDisliked(false);
-      }
-    }
-  };
-
-  const handleDislike = () => {
-    if (hasDisliked) {
-      setDislikes((prev) => prev - 1);
-      setHasDisliked(false);
-    } else {
-      setDislikes((prev) => prev + 1);
-      setHasDisliked(true);
-      if (hasLiked) {
-        setLikes((prev) => prev - 1);
-        setHasLiked(false);
-      }
-    }
-  };
 
   return (
     <Card
@@ -164,7 +197,6 @@ export const Post = ({
           {content}
         </Typography>
 
-        
         <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1.25 }}>
           <IconButton
             onClick={handleLike}
@@ -172,7 +204,7 @@ export const Post = ({
             sx={{ color: hasLiked ? "#1976d2" : "#bbb", p: 0.5 }}
           >
             <ThumbUpIcon fontSize="small" />
-            <Typography sx={{ ml: 0.5, color: "inherit", fontSize: "0.9rem" }}>
+            <Typography sx={{ ml: 0.5, fontSize: "0.9rem" }}>
               {likes}
             </Typography>
           </IconButton>
@@ -183,19 +215,18 @@ export const Post = ({
             sx={{ color: hasDisliked ? "#d32f2f" : "#bbb", p: 0.5 }}
           >
             <ThumbDownIcon fontSize="small" />
-            <Typography sx={{ ml: 0.5, color: "inherit", fontSize: "0.9rem" }}>
+            <Typography sx={{ ml: 0.5, fontSize: "0.9rem" }}>
               {dislikes}
             </Typography>
           </IconButton>
 
-          {/* コメントページへのリンク */}
           <IconButton
             component={Link}
             to={`/post/${id}/comments`}
             sx={{ color: "#bbb", p: 0.5 }}
           >
             <ChatBubbleOutlineIcon fontSize="small" />
-            <Typography sx={{ ml: 0.5, color: "inherit", fontSize: "0.9rem" }}>
+            <Typography sx={{ ml: 0.5, fontSize: "0.9rem" }}>
               {commentCount ?? 0}
             </Typography>
           </IconButton>
@@ -206,4 +237,3 @@ export const Post = ({
 };
 
 export default Post;
-

@@ -15,6 +15,7 @@ import {
 } from "@mui/material";
 import logo from "../assets/anime.png";
 import MenuIcon from "@mui/icons-material/Menu";
+import SearchBox from "./SearchBox"; // ← 追加
 
 type HeaderProps = {
   toggleSidebar: () => void;
@@ -44,15 +45,13 @@ export default function Header({ toggleSidebar, user }: HeaderProps) {
       <Toolbar sx={{ display: "flex", justifyContent: "space-between" }}>
         {/* 左側 */}
         <Box sx={{ display: "flex", alignItems: "center" }}>
-          {/* メニューアイコン */}
           <IconButton
-          edge="start"
-          onClick={toggleSidebar}
-          sx={{ color: "#fff", mr: 2 }} 
+            edge="start"
+            onClick={toggleSidebar}
+            sx={{ color: "#fff", mr: 2 }}
           >
-        <MenuIcon />
-        </IconButton>
-          
+            <MenuIcon />
+          </IconButton>
 
           {/* ロゴ */}
           <Box
@@ -69,23 +68,12 @@ export default function Header({ toggleSidebar, user }: HeaderProps) {
           />
         </Box>
 
-        {/* 中央：検索バー */}
-        <Box component="form" onSubmit={(e) => e.preventDefault()}>
-          <input
-            type="text"
-            placeholder="検索..."
-            style={{
-              padding: "6px 10px",
-              borderRadius: "20px",
-              border: "1px solid #555",
-              backgroundColor: "#2c2c2c",
-              color: "#fff",
-              outline: "none",
-            }}
-          />
+        {/* 🔹中央：SearchBoxを挿入 */}
+        <Box>
+          <SearchBox />
         </Box>
 
-        {/* 右側：投稿ボタン & プロフィール */}
+        {/* 右側 */}
         <Box display="flex" alignItems="center" gap={2} ref={menuRef}>
           <Link to="/create" style={{ textDecoration: "none" }}>
             <Button variant="contained" color="error">

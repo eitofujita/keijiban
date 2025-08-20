@@ -10,7 +10,14 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "algoliasearch": "^5.35.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
     "firebase": "^12.0.0",
     "firebase-admin": "^13.4.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/node": "^24.3.0"
   }
 }

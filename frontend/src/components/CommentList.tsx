@@ -10,7 +10,6 @@ import {
   updateDoc,
   increment,
   Timestamp,
-
 } from "firebase/firestore";
 import { useAuth } from "../hooks/useAuth";
 import {
@@ -19,8 +18,13 @@ import {
   ListItemText,
   Typography,
   IconButton,
+  Menu,
+  MenuItem,
+  TextField,
+  Button,
+  Box,
 } from "@mui/material";
-import DeleteIcon from "@mui/icons-material/Delete";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 
 type CommentListProps = {
   postId: string;
@@ -29,7 +33,7 @@ type CommentListProps = {
 type CommentData = {
   id: string;
   text: string;
-  uid: string; // ← Firestore のフィールドに合わせた
+  uid: string;
   username: string;
   createdAt?: Timestamp | null;
 };
@@ -38,46 +42,58 @@ export default function CommentList({ postId }: CommentListProps) {
   const [comments, setComments] = useState<CommentData[]>([]);
   const { user } = useAuth();
 
-useEffect(() => {
-  if (!postId) return;
+  // どのコメントを編集中か
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState("");
 
-  const q = query(
-    collection(db, "posts", postId, "comments"), // 🔹 サブコレクションに統一
-    orderBy("createdAt", "asc")
-  );
+  useEffect(() => {
+    if (!postId) return;
 
-  const unsubscribe = onSnapshot(q, (snapshot) => {
-    setComments(
-      snapshot.docs.map(
-        (doc) => ({ id: doc.id, ...doc.data() } as CommentData)
-      )
+    const q = query(
+      collection(db, "posts", postId, "comments"),
+      orderBy("createdAt", "asc")
     );
-  });
 
-  return () => unsubscribe();
-}, [postId]);
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setComments(
+        snapshot.docs.map(
+          (doc) => ({ id: doc.id, ...doc.data() } as CommentData)
+        )
+      );
+    });
 
-const handleDelete = async (commentId: string, commentUid: string) => {
-  if (!user) {
-    alert("ログインしてください。");
-    return;
-  }
-  if (user.uid !== commentUid) {
-    alert("自分のコメントだけ削除できます。");
-    return;
-  }
+    return () => unsubscribe();
+  }, [postId]);
 
-  try {
-    await deleteDoc(doc(db, "posts", postId, "comments", commentId)); // 🔹 サブコレクション削除
+  const handleDelete = async (commentId: string, commentUid: string) => {
+    if (!user) {
+      alert("ログインしてください。");
+      return;
+    }
+    if (user.uid !== commentUid) {
+      alert("自分のコメントだけ削除できます。");
+      return;
+    }
 
-    const postRef = doc(db, "posts", postId);
-    await updateDoc(postRef, { commentsCount: increment(-1) });
-  } catch (err) {
-    console.error("コメント削除エラー:", err);
-    alert("コメントの削除に失敗しました。");
-  }
-};
+    try {
+      await deleteDoc(doc(db, "posts", postId, "comments", commentId));
 
+      const postRef = doc(db, "posts", postId);
+      await updateDoc(postRef, { commentsCount: increment(-1) });
+    } catch (err) {
+      console.error("コメント削除エラー:", err);
+      alert("コメントの削除に失敗しました。");
+    }
+  };
+
+  // コメント編集を保存
+  const handleUpdate = async (commentId: string) => {
+    if (!user) return;
+
+    const commentRef = doc(db, "posts", postId, "comments", commentId);
+    await updateDoc(commentRef, { text: editText });
+    setEditingId(null); // 編集モード解除
+  };
 
   return (
     <List>
@@ -89,14 +105,18 @@ const handleDelete = async (commentId: string, commentUid: string) => {
         comments.map((c) => (
           <ListItem
             key={c.id}
+            alignItems="flex-start"
             secondaryAction={
-              user?.uid === c.uid && ( // ← userId → uid に修正
-                <IconButton
-                  edge="end"
-                  onClick={() => handleDelete(c.id, c.uid)}
-                >
-                  <DeleteIcon sx={{ color: "#d32f2f" }} />
-                </IconButton>
+              user?.uid === c.uid && editingId !== c.id && (
+                <CommentOptions
+                  commentId={c.id}
+                  currentText={c.text}
+                  onDelete={() => handleDelete(c.id, c.uid)}
+                  onEdit={() => {
+                    setEditingId(c.id);
+                    setEditText(c.text);
+                  }}
+                />
               )
             }
           >
@@ -107,25 +127,104 @@ const handleDelete = async (commentId: string, commentUid: string) => {
                 </Typography>
               }
               secondary={
-                <Typography sx={{ color: "#ccc" }}>
-                  {c.text}
-                  {c.createdAt && (
-                    <span
-                      style={{
-                        fontSize: "0.7rem",
-                        marginLeft: 8,
-                        color: "#888",
+                editingId === c.id ? (
+                  <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
+                    <TextField
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      size="small"
+                      fullWidth
+                      sx={{
+                        input: { color: "#fff" },
                       }}
+                    />
+                    <Button
+                      variant="contained"
+                      size="small"
+                      onClick={() => handleUpdate(c.id)}
                     >
-                      {c.createdAt.toDate().toLocaleString()}
-                    </span>
-                  )}
-                </Typography>
+                      保存
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => setEditingId(null)}
+                    >
+                      キャンセル
+                    </Button>
+                  </Box>
+                ) : (
+                  <Typography sx={{ color: "#ccc" }}>
+                    {c.text}
+                    {c.createdAt && (
+                      <span
+                        style={{
+                          fontSize: "0.7rem",
+                          marginLeft: 8,
+                          color: "#888",
+                        }}
+                      >
+                        {c.createdAt.toDate().toLocaleString()}
+                      </span>
+                    )}
+                  </Typography>
+                )
               }
             />
           </ListItem>
         ))
       )}
     </List>
+  );
+}
+
+/* 🔹 コメントのオプションメニュー */
+function CommentOptions({
+  commentId,
+  currentText,
+  onDelete,
+  onEdit,
+}: {
+  commentId: string;
+  currentText: string;
+  onDelete: () => void;
+  onEdit: () => void;
+}) {
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const open = Boolean(anchorEl);
+
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  return (
+    <>
+      <IconButton onClick={handleClick}>
+        <MoreVertIcon sx={{ color: "#ccc" }} />
+      </IconButton>
+      <Menu anchorEl={anchorEl} open={open} onClose={handleClose}>
+        <MenuItem
+          onClick={() => {
+            handleClose();
+            onEdit();
+          }}
+        >
+          編集
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            handleClose();
+            onDelete();
+          }}
+          sx={{ color: "red" }}
+        >
+          削除
+        </MenuItem>
+      </Menu>
+    </>
   );
 }

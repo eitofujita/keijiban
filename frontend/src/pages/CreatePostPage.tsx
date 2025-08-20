@@ -73,7 +73,7 @@ export default function CreatePostPage() {
         }}
       >
         <Typography variant="h5" sx={{ mb: 3 }}>
-          {community ? `新しい投稿を作成（r/${community.name}）` : "読み込み中..."}
+          {community ? `新しい投稿を作成` : "読み込み中..."}
         </Typography>
 
         <Box component="form" onSubmit={handleSubmit} noValidate>

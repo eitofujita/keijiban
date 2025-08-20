@@ -1,14 +1,18 @@
 // src/pages/Home.tsx
 import { useEffect, useState } from "react";
 import { db } from "../firebase";
-import { collection, query, getDocs, orderBy } from "firebase/firestore";
-import type { DocumentData, Timestamp } from "firebase/firestore";
+import {
+  collection,
+  query,
+  getDocs,
+  orderBy,
+  limit,
+  Timestamp,
+  DocumentData,
+} from "firebase/firestore";
 import { Box, Typography } from "@mui/material";
 import { Post as PostCard } from "../components/Post";
 
-
-
-// 投稿型
 type Post = DocumentData & {
   id: string;
   title?: string;
@@ -16,7 +20,7 @@ type Post = DocumentData & {
   username?: string;
   avatarUrl?: string;
   communitySlug?: string;
-  timestamp?: Timestamp;
+  timestamp?: Timestamp | null;
   upvotes?: number;
 };
 
@@ -25,24 +29,22 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchPosts = async () => {
-      setLoading(true);
-
-      const q = query(
-        collection(db, "posts"),
-        orderBy("timestamp", "desc") // 新しい順
-      );
-      const snapshot = await getDocs(q);
-
-      setPosts(
-        snapshot.docs.map(
-          (doc) => ({ id: doc.id, ...doc.data() } as Post)
-        )
-      );
-      setLoading(false);
-    };
-
-    fetchPosts();
+    (async () => {
+      try {
+        setLoading(true);
+        const q = query(
+          collection(db, "posts"),
+          orderBy("timestamp", "desc"),
+          limit(50)
+        );
+        const snapshot = await getDocs(q);
+        setPosts(
+          snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Post))
+        );
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
   return (
@@ -60,16 +62,15 @@ export default function Home() {
           <PostCard
             key={post.id}
             id={post.id}
-            title={post.title || "(No title)"}
-            content={post.content || ""}
-            username={post.username || "名無し"}
-            avatarUrl={post.avatarUrl || ""}
+            title={post.title ?? "(No title)"}
+            content={post.content ?? ""}
+            username={post.username ?? "名無し"}
+            avatarUrl={post.avatarUrl ?? ""}
+            communitySlug={post.communitySlug ?? ""}
             timestamp={
               post.timestamp ? post.timestamp.toDate().toLocaleString() : ""
             }
-            upvotes={post.upvotes || 0}
-            
-            communitySlug={post.communitySlug || ""}
+            upvotes={post.upvotes ?? 0}
           />
         ))
       )}

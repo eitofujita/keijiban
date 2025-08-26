@@ -11,16 +11,26 @@ import {
   CardContent,
   Avatar,
   Stack,
+  Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from "@mui/material";
 import { Post as PostCard } from "../components/Post";
+import { useAuth } from "../hooks/useAuth";
+import { joinCommunity, leaveCommunity } from "../services/community";
 
 // コミュニティ型
 type Community = DocumentData & {
+  id?: string;
   slug: string;
   name: string;
   displayName?: string;
   description?: string;
   iconUrl?: string;
+  hostId?: string;
 };
 
 // 投稿型
@@ -37,9 +47,15 @@ type Post = DocumentData & {
 export default function CommunityPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [community, setCommunity] = useState<Community | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [isJoining, setIsJoining] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
+  const [isMember, setIsMember] = useState(false);
+  const [isHost, setIsHost] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   useEffect(() => {
     const cleanSlug = slug?.replace(/^@/, "");
@@ -49,8 +65,9 @@ export default function CommunityPage() {
       const q = query(collection(db, "communities"), where("slug", "==", cleanSlug));
       const querySnapshot = await getDocs(q);
       if (!querySnapshot.empty) {
-        const data = querySnapshot.docs[0].data() as Community;
-        setCommunity(data);
+        const ref = querySnapshot.docs[0];
+        const data = ref.data() as any;
+        setCommunity({ id: ref.id, hostId: data.hostId, ...data } as Community);
       }
     };
 
@@ -73,7 +90,63 @@ export default function CommunityPage() {
     fetchPosts();
   }, [slug]);
 
+  // ユーザーのメンバーシップ状態をチェック
+  useEffect(() => {
+    const checkMembership = async () => {
+      if (!user || !community) return;
+      
+      // ホストかどうかチェック
+      if (community.hostId === user.uid) {
+        setIsHost(true);
+        setIsMember(true);
+        return;
+      }
+
+      // メンバーかどうかチェック
+      if (!community.id) return;
+      const memberQuery = query(
+        collection(db, "communities", community.id, "members"),
+        where("userId", "==", user.uid)
+      );
+      const memberSnapshot = await getDocs(memberQuery);
+      setIsMember(!memberSnapshot.empty);
+    };
+
+    checkMembership();
+  }, [user, community]);
+
   if (!community) return <Typography sx={{ color: "#fff", p: 2 }}>Loading...</Typography>;
+
+  const handleJoin = async () => {
+    if (!user || !community || !community.id) return;
+    
+    setIsJoining(true);
+    try {
+      await joinCommunity(community.id, user.uid);
+      setIsMember(true);
+    } catch (error) {
+      console.error('Failed to join community:', error);
+      alert('コミュニティに参加できませんでした');
+    } finally {
+      setIsJoining(false);
+    }
+  };
+
+  const doLeave = async () => {
+    if (!user || !community || !community.id) return;
+    setIsLeaving(true);
+    try {
+      await leaveCommunity(community.id, user.uid);
+      setIsMember(false);
+      setIsHost(false);
+      setConfirmOpen(false);
+    } catch (error) {
+      console.error('Failed to leave community:', error);
+      alert('コミュニティを離れることができませんでした');
+    } finally {
+      setIsLeaving(false);
+    }
+  };
 
   return (
     <Box sx={{ maxWidth: 900, mx: "auto", p: 2, color: "#fff" }}>
@@ -99,22 +172,80 @@ export default function CommunityPage() {
             </Typography>
           )}
 
-          <Button
-            variant="contained"
-            sx={{
-              mt: 2,
-              backgroundColor: "#ff4500",
-              "&:hover": { backgroundColor: "#e03d00" },
-              borderRadius: "20px",
-              textTransform: "none",
-              fontWeight: "bold",
-            }}
-            onClick={() => navigate(`/r/${slug}/create-post`)}
-          >
-            ポスト
-          </Button>
+          <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
+            {user && (
+              <>
+                {isHost ? (
+                  <Chip 
+                    label="ホスト" 
+                    color="primary" 
+                    variant="outlined"
+                    sx={{
+                      borderColor: '#1976d2',
+                      color: '#1976d2',
+                      backgroundColor: 'transparent',
+                      fontWeight: 'bold',
+                      fontSize: '0.875rem',
+                      borderRadius: '12px',
+                      '& .MuiChip-label': {
+                        px: 1,
+                      }
+                    }}
+                  />
+                ) : isMember ? (
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    disabled={isLeaving}
+                    onClick={() => setConfirmOpen(true)}
+                  >
+                    {isLeaving ? '離脱中...' : '離脱する'}
+                  </Button>
+                ) : (
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    disabled={isJoining}
+                    onClick={handleJoin}
+                  >
+                    {isJoining ? '参加中...' : '参加する'}
+                  </Button>
+                )}
+              </>
+            )}
+
+            <Button
+              variant="contained"
+              sx={{
+                backgroundColor: "#ff4500",
+                "&:hover": { backgroundColor: "#e03d00" },
+                borderRadius: "20px",
+                textTransform: "none",
+                fontWeight: "bold",
+              }}
+              onClick={() => navigate(`/r/${slug}/create-post`)}
+            >
+              ポスト
+            </Button>
+          </Stack>
         </CardContent>
       </Card>
+
+      {/* 離脱確認ダイアログ */}
+      <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+        <DialogTitle>コミュニティを離脱しますか？</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            再参加しない限りメンバーではなくなります。
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmOpen(false)}>キャンセル</Button>
+          <Button color="error" variant="contained" onClick={doLeave} disabled={isLeaving}>
+            {isLeaving ? '離脱中...' : '離脱する'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* 投稿一覧 */}
       {posts.length === 0 ? (

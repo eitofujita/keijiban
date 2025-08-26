@@ -8,6 +8,7 @@ export type ModCommunity = {
   slug: string;
   name?: string;
   iconUrl?: string;
+  hostId?: string;
 };
 
 export function useModeratedCommunities(uid?: string | null) {
@@ -22,48 +23,68 @@ export function useModeratedCommunities(uid?: string | null) {
     }
     setLoading(true);
 
-    const q = query(
+    // ホストしているコミュニティを取得
+    const hostQuery = query(
       collection(db, "communities"),
-      where("moderatorIds", "array-contains", uid)
+      where("hostId", "==", uid)
     );
-    const snap = await getDocs(q);
-    const list: ModCommunity[] = snap.docs.map((doc) => {
+    const hostSnap = await getDocs(hostQuery);
+    const hostCommunities: ModCommunity[] = hostSnap.docs.map((doc) => {
       const d = doc.data() as any;
       return {
         id: doc.id,
         slug: d.slug ?? doc.id,
         name: d.displayName,
         iconUrl: d.iconUrl,
+        hostId: d.hostId,
       };
     });
-    setCommunities(list);
+
+    // 参加しているコミュニティを取得
+    const allCommunities = await getDocs(collection(db, "communities"));
+    const memberCommunities: ModCommunity[] = [];
+    
+    for (const communityDoc of allCommunities.docs) {
+      const memberQuery = query(
+        collection(db, "communities", communityDoc.id, "members"),
+        where("userId", "==", uid)
+      );
+      const memberSnap = await getDocs(memberQuery);
+      if (!memberSnap.empty) {
+        const d = communityDoc.data() as any;
+        memberCommunities.push({
+          id: communityDoc.id,
+          slug: d.slug ?? communityDoc.id,
+          name: d.displayName,
+          iconUrl: d.iconUrl,
+          hostId: d.hostId,
+        });
+      }
+    }
+
+    // 重複を除去して結合
+    const allCommunitiesMap = new Map();
+    [...hostCommunities, ...memberCommunities].forEach(community => {
+      allCommunitiesMap.set(community.id, community);
+    });
+    
+    setCommunities(Array.from(allCommunitiesMap.values()));
     setLoading(false);
   }, [uid]);
 
   useEffect(() => {
     if (!uid) return;
 
-    const q = query(
-      collection(db, "communities"),
-      where("moderatorIds", "array-contains", uid)
-    );
+    // リアルタイムリスナーは複雑になるため、定期的に更新
+    const interval = setInterval(() => {
+      fetchCommunities();
+    }, 5000); // 5秒ごとに更新
 
-    const unsub = onSnapshot(q, (snap) => {
-      const list: ModCommunity[] = snap.docs.map((doc) => {
-        const d = doc.data() as any;
-        return {
-          id: doc.id,
-          slug: d.slug ?? doc.id,
-          name: d.displayName,
-          iconUrl: d.iconUrl,
-        };
-      });
-      setCommunities(list);
-      setLoading(false);
-    });
+    // 初回実行
+    fetchCommunities();
 
-    return () => unsub();
-  }, [uid]);
+    return () => clearInterval(interval);
+  }, [uid, fetchCommunities]);
 
   return { loading, communities, refetch: fetchCommunities };
 }

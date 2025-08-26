@@ -17,6 +17,7 @@ import ForumIcon from "@mui/icons-material/Forum";
 import SettingsIcon from "@mui/icons-material/Settings";
 import ExpandLess from "@mui/icons-material/ExpandLess";
 import ExpandMore from "@mui/icons-material/ExpandMore";
+import GroupIcon from "@mui/icons-material/Group";
 import { Link } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { useModeratedCommunities } from "../hooks/useModeratedCommunities";
@@ -126,27 +127,70 @@ export default function Sidebar({ isOpen, toggleMenu }: Props) {
               </ListItemButton>
             </ListItem>
 
-            {/* コミュニティ一覧 */}
-            {!loading && communities.length > 0 ? (
-              communities.map((c) => (
-                <ListItem disablePadding key={c.slug} sx={{ pl: 4 }}>
-                  <ListItemButton
-                    component={Link}
-                    to={`/r/${c.slug}`}
-                    onClick={toggleMenu}
-                  >
-                    <ListItemIcon sx={{ color: "#bbb", minWidth: 40 }}>
-                      {c.iconUrl ? (
-                        <Avatar src={c.iconUrl} sx={{ width: 24, height: 24 }} />
-                      ) : (
-                        <ForumIcon fontSize="small" />
-                      )}
-                    </ListItemIcon>
-                    <ListItemText primary={`@${c.slug}`} {...textProps} />
-                  </ListItemButton>
+            {/* 自分のコミュニティー */}
+            {!loading && communities.length > 0 && (
+              <>
+                <ListItem sx={{ pl: 4, pt: 2 }}>
+                  <ListItemText 
+                    primary="自分のコミュニティー" 
+                    sx={{ color: "#999", fontSize: "0.875rem" }} 
+                    {...textProps} 
+                  />
                 </ListItem>
-              ))
-            ) : (
+                {communities.filter(c => c.hostId === user?.uid).map((c) => (
+                  <ListItem disablePadding key={c.slug} sx={{ pl: 6 }}>
+                    <ListItemButton
+                      component={Link}
+                      to={`/r/${c.slug}`}
+                      onClick={toggleMenu}
+                    >
+                      <ListItemIcon sx={{ color: "#bbb", minWidth: 40 }}>
+                        {c.iconUrl ? (
+                          <Avatar src={c.iconUrl} sx={{ width: 24, height: 24 }} />
+                        ) : (
+                          <ForumIcon fontSize="small" />
+                        )}
+                      </ListItemIcon>
+                      <ListItemText primary={`@${c.slug}`} {...textProps} />
+                    </ListItemButton>
+                  </ListItem>
+                ))}
+              </>
+            )}
+
+            {/* 参加中のコミュニティー */}
+            {!loading && communities.length > 0 && (
+              <>
+                <ListItem sx={{ pl: 4, pt: 2 }}>
+                  <ListItemText 
+                    primary="参加中のコミュニティー" 
+                    sx={{ color: "#999", fontSize: "0.875rem" }} 
+                    {...textProps} 
+                  />
+                </ListItem>
+                {communities.filter(c => c.hostId !== user?.uid).map((c) => (
+                  <ListItem disablePadding key={c.slug} sx={{ pl: 6 }}>
+                    <ListItemButton
+                      component={Link}
+                      to={`/r/${c.slug}`}
+                      onClick={toggleMenu}
+                    >
+                      <ListItemIcon sx={{ color: "#bbb", minWidth: 40 }}>
+                        {c.iconUrl ? (
+                          <Avatar src={c.iconUrl} sx={{ width: 24, height: 24 }} />
+                        ) : (
+                          <ForumIcon fontSize="small" />
+                        )}
+                      </ListItemIcon>
+                      <ListItemText primary={`@${c.slug}`} {...textProps} />
+                    </ListItemButton>
+                  </ListItem>
+                ))}
+              </>
+            )}
+
+            {/* コミュニティがない場合 */}
+            {!loading && communities.length === 0 && (
               <ListItem sx={{ pl: 4 }}>
                 <ListItemText primary="なし" sx={{ color: "#777" }} {...textProps} />
               </ListItem>

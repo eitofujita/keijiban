@@ -1,28 +1,22 @@
 // src/pages/Home.tsx
 import { useEffect, useState } from "react";
-import { db } from "../firebase";
-import {
-  collection,
-  query,
-  getDocs,
-  orderBy,
-  limit,
-  Timestamp,
-  DocumentData,
-} from "firebase/firestore";
 import { Box, Typography } from "@mui/material";
 import { Post as PostCard } from "../components/Post";
 
-type Post = DocumentData & {
-  id: string;
+type Post = {
+  objectID: string;
   title?: string;
   content?: string;
   username?: string;
   avatarUrl?: string;
   communitySlug?: string;
-  timestamp?: Timestamp | null;
-  upvotes?: number;
+  createdAt?: any;
+  likes?: number;
+  dislikes?: number;
+  comments?: number;
 };
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
 
 export default function Home() {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -32,20 +26,40 @@ export default function Home() {
     (async () => {
       try {
         setLoading(true);
-        const q = query(
-          collection(db, "posts"),
-          orderBy("timestamp", "desc"),
-          limit(50)
-        );
-        const snapshot = await getDocs(q);
-        setPosts(
-          snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Post))
-        );
+        const response = await fetch(`${API_BASE_URL}/posts`);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        setPosts(data);
+      } catch (error) {
+        console.error('Error fetching posts:', error);
+        setPosts([]);
       } finally {
         setLoading(false);
       }
     })();
   }, []);
+
+  const formatTimestamp = (timestamp: any) => {
+    if (!timestamp) return "";
+    
+    try {
+      // Handle Firestore Timestamp
+      if (timestamp.toDate) {
+        return timestamp.toDate().toLocaleString();
+      }
+      
+      // Handle regular Date object or string
+      const date = new Date(timestamp);
+      return date.toLocaleString();
+    } catch (error) {
+      console.error('Error formatting timestamp:', error);
+      return "";
+    }
+  };
 
   return (
     <Box sx={{ maxWidth: 900, mx: "auto", p: 2, color: "#fff" }}>
@@ -60,17 +74,15 @@ export default function Home() {
       ) : (
         posts.map((post) => (
           <PostCard
-            key={post.id}
-            id={post.id}
+            key={post.objectID}
+            id={post.objectID}
             title={post.title ?? "(No title)"}
             content={post.content ?? ""}
             username={post.username ?? "名無し"}
             avatarUrl={post.avatarUrl ?? ""}
             communitySlug={post.communitySlug ?? ""}
-            timestamp={
-              post.timestamp ? post.timestamp.toDate().toLocaleString() : ""
-            }
-            upvotes={post.upvotes ?? 0}
+            timestamp={formatTimestamp(post.createdAt)}
+            upvotes={post.likes ?? 0}
           />
         ))
       )}

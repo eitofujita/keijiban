@@ -1,12 +1,18 @@
 // backend/src/services/db.ts
 import admin from "firebase-admin";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 if (!admin.apps.length) {
+  const serviceAccount = {
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+  };
+
   admin.initializeApp({
-    // 環境に応じて credential を設定
-    credential: admin.credential.applicationDefault(),
-    // または serviceAccount を使う:
-    // credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON!)),
+    credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
   });
 }
 

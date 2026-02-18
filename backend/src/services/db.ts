@@ -1,19 +1,27 @@
 // backend/src/services/db.ts
-import admin from "firebase-admin";
+import mongoose from "mongoose";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-if (!admin.apps.length) {
-  const serviceAccount = {
-    projectId: process.env.FIREBASE_PROJECT_ID,
-    privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-  };
+const MONGODB_URI = process.env.MONGODB_URI || `mongodb://${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || '27017'}/${process.env.DB_NAME || 'reddit_clone'}`;
 
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
-  });
+let isConnected = false;
+
+export async function connectDB() {
+  if (isConnected) {
+    console.log('MongoDB already connected');
+    return;
+  }
+
+  try {
+    await mongoose.connect(MONGODB_URI);
+    isConnected = true;
+    console.log('✅ MongoDB connected successfully');
+  } catch (error) {
+    console.error('❌ MongoDB connection error:', error);
+    throw error;
+  }
 }
 
-export const db = admin.firestore();
+export default mongoose;

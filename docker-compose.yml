@@ -9,3 +9,33 @@ services:
       MEILI_MASTER_KEY: "dev_master_key"
     volumes:
       - ./meili_data:/meili_data
+
+  mongodb:
+    image: mongo:latest
+    container_name: reddit-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=reddit_clone
+
+  backend:
+    build: ./backend
+    container_name: reddit-backend
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - MEILISEARCH_HOST=http://meilisearch:7700
+      - MEILISEARCH_MASTER_KEY=dev_master_key
+      - MONGODB_URI=mongodb://mongodb:27017/reddit_clone
+    depends_on:
+      - meilisearch
+      - mongodb
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
+volumes:
+  mongodb_data:

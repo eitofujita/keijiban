@@ -16,7 +16,7 @@ type Post = {
   comments?: number;
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+import { getAllPosts } from "../services/post";
 
 export default function Home() {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -26,13 +26,7 @@ export default function Home() {
     (async () => {
       try {
         setLoading(true);
-        const response = await fetch(`${API_BASE_URL}/posts`);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
+        const data = await getAllPosts();
         setPosts(data);
       } catch (error) {
         console.error('Error fetching posts:', error);

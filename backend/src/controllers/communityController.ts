@@ -1,28 +1,27 @@
 import { Request, Response } from "express";
-import { db } from "../services/db";
-import { indexCommunity } from "./searchController";
+import { Community } from "../models/Community";
+import { CommunityMember } from "../models/CommunityMember";
+import { Post } from "../models/Post";
+import { indexCommunity, deleteCommunity as deleteCommunityFromIndex } from "./searchController";
+import { deletePost as deletePostFromIndex } from "./searchController";
 
-// Get all communities from Firestore
+// Get all communities from MongoDB
 export async function getAllCommunities(req: Request, res: Response) {
   try {
-    const communitiesSnapshot = await db.collection('communities').get();
-    const communities: any[] = [];
+    const communities = await Community.find({}).sort({ createdAt: -1 });
     
-    communitiesSnapshot.forEach((doc) => {
-      const data = doc.data();
-      communities.push({
-        objectID: doc.id,
-        displayName: data.displayName || data.name,
-        slug: data.slug,
-        description: data.description,
-        iconUrl: data.iconUrl || data.avatar,
-        createdAt: data.createdAt,
-        memberCount: data.memberCount || 0,
-        hostId: data.hostId
-      });
-    });
+    const communitiesData = communities.map(community => ({
+      objectID: community.id,
+      displayName: community.displayName,
+      slug: community.slug,
+      description: community.description,
+      iconUrl: community.iconUrl,
+      createdAt: community.createdAt,
+      memberCount: community.memberCount || 0,
+      hostId: community.hostId
+    }));
 
-    res.json(communities);
+    res.json(communitiesData);
   } catch (error) {
     console.error('Error fetching communities:', error);
     res.status(500).json({ error: 'Failed to fetch communities' });
@@ -33,25 +32,24 @@ export async function getAllCommunities(req: Request, res: Response) {
 export async function getCommunityById(req: Request, res: Response) {
   try {
     const { id } = req.params;
-    const communityDoc = await db.collection('communities').doc(id).get();
+    const community = await Community.findById(id);
     
-    if (!communityDoc.exists) {
+    if (!community) {
       return res.status(404).json({ error: 'Community not found' });
     }
 
-    const data = communityDoc.data();
-    const community = {
-      objectID: communityDoc.id,
-      displayName: data?.displayName || data?.name,
-      slug: data?.slug,
-      description: data?.description,
-      iconUrl: data?.iconUrl || data?.avatar,
-      createdAt: data?.createdAt,
-      memberCount: data?.memberCount || 0,
-      hostId: data?.hostId
+    const communityData = {
+      objectID: community.id,
+      displayName: community.displayName,
+      slug: community.slug,
+      description: community.description,
+      iconUrl: community.iconUrl,
+      createdAt: community.createdAt,
+      memberCount: community.memberCount || 0,
+      hostId: community.hostId
     };
 
-    res.json(community);
+    res.json(communityData);
   } catch (error) {
     console.error('Error fetching community:', error);
     res.status(500).json({ error: 'Failed to fetch community' });
@@ -63,35 +61,45 @@ export async function createCommunity(req: Request, res: Response) {
   try {
     const { displayName, slug, description, iconUrl, hostId } = req.body;
     
+    // Check if slug already exists
+    const existingCommunity = await Community.findOne({ slug });
+    if (existingCommunity) {
+      return res.status(400).json({ error: 'Community with this slug already exists' });
+    }
+    
     const communityData = {
       displayName,
       slug,
       description,
       iconUrl,
       hostId,
-      createdAt: new Date().toISOString(),
       memberCount: 1 // Host is the first member
     };
 
-    const docRef = await db.collection('communities').add(communityData);
+    const newCommunity = await Community.create(communityData);
     
-    const newCommunity = {
-      objectID: docRef.id,
-      ...communityData
+    // Add host as first member
+    await CommunityMember.create({
+      communityId: newCommunity._id,
+      userId: hostId,
+      role: 'host'
+    });
+    
+    const communityResponse = {
+      objectID: newCommunity.id,
+      displayName: newCommunity.displayName,
+      slug: newCommunity.slug,
+      description: newCommunity.description,
+      iconUrl: newCommunity.iconUrl,
+      createdAt: newCommunity.createdAt,
+      memberCount: newCommunity.memberCount,
+      hostId: newCommunity.hostId
     };
 
-    // Add host as first member
-    await db.collection('communities').doc(docRef.id)
-      .collection('members').doc(hostId).set({
-        userId: hostId,
-        role: 'host',
-        joinedAt: new Date().toISOString()
-      });
-
     // Index in Meilisearch
-    await indexCommunity(newCommunity);
+    await indexCommunity(communityResponse);
 
-    res.status(201).json(newCommunity);
+    res.status(201).json(communityResponse);
   } catch (error) {
     console.error('Error creating community:', error);
     res.status(500).json({ error: 'Failed to create community' });
@@ -104,28 +112,26 @@ export async function updateCommunity(req: Request, res: Response) {
     const { id } = req.params;
     const { displayName, description, iconUrl } = req.body;
 
-    const updateData = {
-      displayName,
-      description,
-      iconUrl,
-      updatedAt: new Date().toISOString()
-    };
+    const community = await Community.findById(id);
+    if (!community) {
+      return res.status(404).json({ error: 'Community not found' });
+    }
 
-    await db.collection('communities').doc(id).update(updateData);
+    if (displayName) community.displayName = displayName;
+    if (description !== undefined) community.description = description;
+    if (iconUrl !== undefined) community.iconUrl = iconUrl;
     
-    // Get updated community
-    const communityDoc = await db.collection('communities').doc(id).get();
-    const data = communityDoc.data();
+    await community.save();
     
     const updatedCommunity = {
-      objectID: communityDoc.id,
-      displayName: data?.displayName,
-      slug: data?.slug,
-      description: data?.description,
-      iconUrl: data?.iconUrl,
-      createdAt: data?.createdAt,
-      memberCount: data?.memberCount || 0,
-      hostId: data?.hostId
+      objectID: community.id,
+      displayName: community.displayName,
+      slug: community.slug,
+      description: community.description,
+      iconUrl: community.iconUrl,
+      createdAt: community.createdAt,
+      memberCount: community.memberCount || 0,
+      hostId: community.hostId
     };
 
     // Update in Meilisearch
@@ -143,41 +149,30 @@ export async function deleteCommunity(req: Request, res: Response) {
   try {
     const { id } = req.params;
     
-    // Get community info before deletion
-    const communityDoc = await db.collection('communities').doc(id).get();
-    if (!communityDoc.exists) {
+    const community = await Community.findById(id);
+    if (!community) {
       return res.status(404).json({ error: 'Community not found' });
     }
     
-    const communityData = communityDoc.data();
-    const communitySlug = communityData?.slug;
+    const communitySlug = community.slug;
     
     // Delete all posts in this community
-    if (communitySlug) {
-      const postsSnapshot = await db.collection('posts')
-        .where('communitySlug', '==', communitySlug)
-        .get();
-      
-      const deletePromises = postsSnapshot.docs.map(doc => {
-        // Delete post from Meilisearch
-        deletePostFromIndex(doc.id);
-        // Delete post from Firestore
-        return doc.ref.delete();
-      });
-      
-      await Promise.all(deletePromises);
-      console.log(`Deleted ${postsSnapshot.docs.length} posts from community: ${communitySlug}`);
+    const posts = await Post.find({ communitySlug });
+    
+    for (const post of posts) {
+      // Delete post from Meilisearch
+      await deletePostFromIndex(post.id);
     }
     
-    // Delete all members
-    const membersSnapshot = await db.collection('communities').doc(id)
-      .collection('members').get();
+    // Delete all posts from MongoDB
+    await Post.deleteMany({ communitySlug });
+    console.log(`Deleted ${posts.length} posts from community: ${communitySlug}`);
     
-    const memberDeletePromises = membersSnapshot.docs.map(doc => doc.ref.delete());
-    await Promise.all(memberDeletePromises);
+    // Delete all members
+    await CommunityMember.deleteMany({ communityId: id });
     
     // Delete the community
-    await db.collection('communities').doc(id).delete();
+    await Community.findByIdAndDelete(id);
     
     // Remove from Meilisearch
     await deleteCommunityFromIndex(id);
@@ -196,38 +191,35 @@ export async function joinCommunity(req: Request, res: Response) {
     const { userId } = req.body;
 
     // Check if community exists
-    const communityDoc = await db.collection('communities').doc(communityId).get();
-    if (!communityDoc.exists) {
+    const community = await Community.findById(communityId);
+    if (!community) {
       return res.status(404).json({ error: 'Community not found' });
     }
 
     // Check if user is already a member
-    const memberDoc = await db.collection('communities').doc(communityId)
-      .collection('members').doc(userId).get();
+    const existingMember = await CommunityMember.findOne({
+      communityId,
+      userId
+    });
     
-    if (memberDoc.exists) {
+    if (existingMember) {
       return res.status(400).json({ error: 'User is already a member' });
     }
 
     // Add user as member
-    await db.collection('communities').doc(communityId)
-      .collection('members').doc(userId).set({
-        userId,
-        role: 'member',
-        joinedAt: new Date().toISOString()
-      });
+    await CommunityMember.create({
+      communityId,
+      userId,
+      role: 'member'
+    });
 
     // Update member count
-    const communityData = communityDoc.data();
-    const newMemberCount = (communityData?.memberCount || 0) + 1;
-    
-    await db.collection('communities').doc(communityId).update({
-      memberCount: newMemberCount
-    });
+    community.memberCount = (community.memberCount || 0) + 1;
+    await community.save();
 
     res.json({ 
       message: 'Successfully joined community',
-      memberCount: newMemberCount
+      memberCount: community.memberCount
     });
   } catch (error) {
     console.error('Error joining community:', error);
@@ -242,41 +234,39 @@ export async function leaveCommunity(req: Request, res: Response) {
     const { userId } = req.body;
 
     // Check if community exists
-    const communityDoc = await db.collection('communities').doc(communityId).get();
-    if (!communityDoc.exists) {
+    const community = await Community.findById(communityId);
+    if (!community) {
       return res.status(404).json({ error: 'Community not found' });
     }
 
     // Check if user is a member
-    const memberDoc = await db.collection('communities').doc(communityId)
-      .collection('members').doc(userId).get();
+    const member = await CommunityMember.findOne({
+      communityId,
+      userId
+    });
     
-    if (!memberDoc.exists) {
+    if (!member) {
       return res.status(400).json({ error: 'User is not a member' });
     }
 
-    const memberData = memberDoc.data();
-    
     // Host cannot leave (must transfer ownership or delete community)
-    if (memberData?.role === 'host') {
+    if (member.role === 'host') {
       return res.status(400).json({ error: 'Host cannot leave community. Transfer ownership or delete community.' });
     }
 
     // Remove user from members
-    await db.collection('communities').doc(communityId)
-      .collection('members').doc(userId).delete();
+    await CommunityMember.deleteOne({
+      communityId,
+      userId
+    });
 
     // Update member count
-    const communityData = communityDoc.data();
-    const newMemberCount = Math.max(0, (communityData?.memberCount || 0) - 1);
-    
-    await db.collection('communities').doc(communityId).update({
-      memberCount: newMemberCount
-    });
+    community.memberCount = Math.max(0, (community.memberCount || 0) - 1);
+    await community.save();
 
     res.json({ 
       message: 'Successfully left community',
-      memberCount: newMemberCount
+      memberCount: community.memberCount
     });
   } catch (error) {
     console.error('Error leaving community:', error);
@@ -289,20 +279,15 @@ export async function getCommunityMembers(req: Request, res: Response) {
   try {
     const { communityId } = req.params;
     
-    const membersSnapshot = await db.collection('communities').doc(communityId)
-      .collection('members').get();
+    const members = await CommunityMember.find({ communityId });
     
-    const members: any[] = [];
-    membersSnapshot.forEach((doc) => {
-      const data = doc.data();
-      members.push({
-        userId: doc.id,
-        role: data?.role || 'member',
-        joinedAt: data?.joinedAt
-      });
-    });
+    const membersData = members.map(member => ({
+      userId: member.userId,
+      role: member.role || 'member',
+      joinedAt: member.joinedAt
+    }));
 
-    res.json(members);
+    res.json(membersData);
   } catch (error) {
     console.error('Error fetching community members:', error);
     res.status(500).json({ error: 'Failed to fetch community members' });
@@ -316,15 +301,13 @@ export async function removeMember(req: Request, res: Response) {
     const { hostId } = req.body; // Host ID to verify permissions
 
     // Check if community exists
-    const communityDoc = await db.collection('communities').doc(communityId).get();
-    if (!communityDoc.exists) {
+    const community = await Community.findById(communityId);
+    if (!community) {
       return res.status(404).json({ error: 'Community not found' });
     }
-
-    const communityData = communityDoc.data();
     
     // Check if user is host
-    if (communityData?.hostId !== hostId) {
+    if (community.hostId !== hostId) {
       return res.status(403).json({ error: 'Only host can remove members' });
     }
 
@@ -334,27 +317,28 @@ export async function removeMember(req: Request, res: Response) {
     }
 
     // Check if user is a member
-    const memberDoc = await db.collection('communities').doc(communityId)
-      .collection('members').doc(userId).get();
+    const member = await CommunityMember.findOne({
+      communityId,
+      userId
+    });
     
-    if (!memberDoc.exists) {
+    if (!member) {
       return res.status(400).json({ error: 'User is not a member' });
     }
 
     // Remove user from members
-    await db.collection('communities').doc(communityId)
-      .collection('members').doc(userId).delete();
+    await CommunityMember.deleteOne({
+      communityId,
+      userId
+    });
 
     // Update member count
-    const newMemberCount = Math.max(0, (communityData?.memberCount || 0) - 1);
-    
-    await db.collection('communities').doc(communityId).update({
-      memberCount: newMemberCount
-    });
+    community.memberCount = Math.max(0, (community.memberCount || 0) - 1);
+    await community.save();
 
     res.json({ 
       message: 'Successfully removed member',
-      memberCount: newMemberCount
+      memberCount: community.memberCount
     });
   } catch (error) {
     console.error('Error removing member:', error);
@@ -369,41 +353,40 @@ export async function transferOwnership(req: Request, res: Response) {
     const { currentHostId, newHostId } = req.body;
 
     // Check if community exists
-    const communityDoc = await db.collection('communities').doc(communityId).get();
-    if (!communityDoc.exists) {
+    const community = await Community.findById(communityId);
+    if (!community) {
       return res.status(404).json({ error: 'Community not found' });
     }
-
-    const communityData = communityDoc.data();
     
     // Check if user is current host
-    if (communityData?.hostId !== currentHostId) {
+    if (community.hostId !== currentHostId) {
       return res.status(403).json({ error: 'Only current host can transfer ownership' });
     }
 
     // Check if new host is a member
-    const newHostMemberDoc = await db.collection('communities').doc(communityId)
-      .collection('members').doc(newHostId).get();
+    const newHostMember = await CommunityMember.findOne({
+      communityId,
+      userId: newHostId
+    });
     
-    if (!newHostMemberDoc.exists) {
+    if (!newHostMember) {
       return res.status(400).json({ error: 'New host must be a member of the community' });
     }
 
     // Update community host
-    await db.collection('communities').doc(communityId).update({
-      hostId: newHostId
-    });
+    community.hostId = newHostId;
+    await community.save();
 
     // Update member roles
-    await db.collection('communities').doc(communityId)
-      .collection('members').doc(currentHostId).update({
-        role: 'member'
-      });
+    await CommunityMember.updateOne(
+      { communityId, userId: currentHostId },
+      { role: 'member' }
+    );
 
-    await db.collection('communities').doc(communityId)
-      .collection('members').doc(newHostId).update({
-        role: 'host'
-      });
+    await CommunityMember.updateOne(
+      { communityId, userId: newHostId },
+      { role: 'host' }
+    );
 
     res.json({ 
       message: 'Successfully transferred ownership',
@@ -412,24 +395,5 @@ export async function transferOwnership(req: Request, res: Response) {
   } catch (error) {
     console.error('Error transferring ownership:', error);
     res.status(500).json({ error: 'Failed to transfer ownership' });
-  }
-}
-
-// Import functions from searchController
-async function deleteCommunityFromIndex(communityId: string) {
-  try {
-    const { meiliCommunityIndex } = await import("../services/meilisearch");
-    await meiliCommunityIndex.deleteDocument(communityId);
-  } catch (error) {
-    console.error('Error deleting community from index:', error);
-  }
-}
-
-async function deletePostFromIndex(postId: string) {
-  try {
-    const { meiliIndex } = await import("../services/meilisearch");
-    await meiliIndex.deleteDocument(postId);
-  } catch (error) {
-    console.error('Error deleting post from index:', error);
   }
 }

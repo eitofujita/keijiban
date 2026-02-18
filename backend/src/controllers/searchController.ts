@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { meiliIndex, meiliCommunityIndex } from "../services/meilisearch";
-import { db } from "../services/db";
+import { Community } from "../models/Community";
 
 export async function searchAll(req: Request, res: Response) {
   try {
@@ -72,33 +72,29 @@ export async function deleteCommunity(communityId: string) {
   }
 }
 
-// Function to migrate existing communities from Firestore to Meilisearch
+// Function to migrate existing communities from MongoDB to Meilisearch
 export async function migrateCommunities(req: Request, res: Response) {
   try {
-    const communitiesSnapshot = await db.collection('communities').get();
-    const communities: any[] = [];
+    const communities = await Community.find({});
     
-    communitiesSnapshot.forEach((doc) => {
-      const data = doc.data();
-      communities.push({
-        objectID: doc.id,
-        displayName: data.displayName || data.name,
-        slug: data.slug,
-        description: data.description,
-        iconUrl: data.iconUrl || data.avatar,
-        createdAt: data.createdAt,
-        memberCount: data.memberCount || 0
-      });
-    });
+    const communitiesData = communities.map(community => ({
+      objectID: community.id,
+      displayName: community.displayName,
+      slug: community.slug,
+      description: community.description,
+      iconUrl: community.iconUrl,
+      createdAt: community.createdAt,
+      memberCount: community.memberCount || 0
+    }));
 
-    if (communities.length > 0) {
-      await meiliCommunityIndex.addDocuments(communities);
+    if (communitiesData.length > 0) {
+      await meiliCommunityIndex.addDocuments(communitiesData);
     }
 
     res.json({ 
       message: 'Communities migrated successfully',
-      count: communities.length,
-      communities: communities
+      count: communitiesData.length,
+      communities: communitiesData
     });
   } catch (error) {
     console.error('Error migrating communities:', error);

@@ -14,15 +14,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { useModeratedCommunities } from "../hooks/useModeratedCommunities";
 import { Link } from "react-router-dom";
-import { db } from "../firebase";
-import {
-  doc,
-  onSnapshot,
-  updateDoc,
-  arrayUnion,
-  arrayRemove,
-  increment,
-} from "firebase/firestore";
+import { getPostById, togglePostReaction } from "../services/post";
 
 type PostProps = {
   id: string;
@@ -54,72 +46,57 @@ export const Post = ({
   const [dislikes, setDislikes] = useState(0);
   const [commentCount, setCommentCount] = useState(commentsCount);
 
-  // ✅ 自分がいいね／バッドしているかどうか
+  // 自分がいいね／低評価しているかどうか
   const [hasLiked, setHasLiked] = useState(false);
   const [hasDisliked, setHasDisliked] = useState(false);
 
-  // 🔹 Firestoreを購読
+  // 投稿データを取得して更新
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, "posts", id), (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setLikes(data.likes ?? 0);
-        setDislikes(data.dislikes ?? 0);
-        setCommentCount(data.commentsCount ?? 0);
+    const fetchPost = async () => {
+      try {
+        const postData = await getPostById(id);
+        setLikes(postData.likes || 0);
+        setDislikes(postData.dislikes || 0);
+        setCommentCount(postData.comments || 0);
         if (user) {
-          setHasLiked(data.likedBy?.includes(user.uid));
-          setHasDisliked(data.dislikedBy?.includes(user.uid));
+          setHasLiked(postData.likedBy?.includes(user.uid) || false);
+          setHasDisliked(postData.dislikedBy?.includes(user.uid) || false);
         }
+      } catch (error) {
+        console.error("Error fetching post:", error);
       }
-    });
-    return () => unsub();
+    };
+    fetchPost();
+    // 定期的に更新（ポーリング）
+    const interval = setInterval(fetchPost, 3000);
+    return () => clearInterval(interval);
   }, [id, user]);
 
-  // 🔹 いいね処理（トグル式）
+  // いいね処理（トグル式）
   const handleLike = async () => {
     if (!user) return;
-    const postRef = doc(db, "posts", id);
-
-    if (hasLiked) {
-      // 取り消す
-      await updateDoc(postRef, {
-        likes: increment(-1),
-        likedBy: arrayRemove(user.uid),
-      });
-    } else {
-      // いいねを追加
-      await updateDoc(postRef, {
-        likes: increment(1),
-        likedBy: arrayUnion(user.uid),
-        ...(hasDisliked && {
-          dislikes: increment(-1),
-          dislikedBy: arrayRemove(user.uid),
-        }),
-      });
+    try {
+      const updatedPost = await togglePostReaction(id, user.uid, "like");
+      setLikes(updatedPost.likes);
+      setDislikes(updatedPost.dislikes);
+      setHasLiked(updatedPost.likedBy?.includes(user.uid) || false);
+      setHasDisliked(updatedPost.dislikedBy?.includes(user.uid) || false);
+    } catch (error) {
+      console.error("Error liking post:", error);
     }
   };
 
-  // 🔹 バッド処理（トグル式）
+  // 低評価処理（トグル式）
   const handleDislike = async () => {
     if (!user) return;
-    const postRef = doc(db, "posts", id);
-
-    if (hasDisliked) {
-      // 取り消す
-      await updateDoc(postRef, {
-        dislikes: increment(-1),
-        dislikedBy: arrayRemove(user.uid),
-      });
-    } else {
-      // バッドを追加
-      await updateDoc(postRef, {
-        dislikes: increment(1),
-        dislikedBy: arrayUnion(user.uid),
-        ...(hasLiked && {
-          likes: increment(-1),
-          likedBy: arrayRemove(user.uid),
-        }),
-      });
+    try {
+      const updatedPost = await togglePostReaction(id, user.uid, "dislike");
+      setLikes(updatedPost.likes);
+      setDislikes(updatedPost.dislikes);
+      setHasLiked(updatedPost.likedBy?.includes(user.uid) || false);
+      setHasDisliked(updatedPost.dislikedBy?.includes(user.uid) || false);
+    } catch (error) {
+      console.error("Error disliking post:", error);
     }
   };
 

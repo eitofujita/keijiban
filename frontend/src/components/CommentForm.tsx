@@ -1,21 +1,14 @@
 import { useState } from "react";
 import { Box, TextField, Button } from "@mui/material";
-import {
-  addDoc,
-  collection,
-  serverTimestamp,
-  doc,
-  updateDoc,
-  increment,
-} from "firebase/firestore";
-import { db } from "../firebase";
 import { useAuth } from "../hooks/useAuth";
+import { createComment } from "../services/comment";
 
 type CommentFormProps = {
   postId: string;
+  onCommentAdded?: () => void;
 };
 
-export default function CommentForm({ postId }: CommentFormProps) {
+export default function CommentForm({ postId, onCommentAdded }: CommentFormProps) {
   const [comment, setComment] = useState("");
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
@@ -30,17 +23,18 @@ export default function CommentForm({ postId }: CommentFormProps) {
 
     setLoading(true);
     try {
-      await addDoc(collection(db, "posts",  postId, "comments"), {
+      await createComment(postId, {
         text: comment.trim(),
-        userId: user.uid,
         username: user.displayName || "名無し",
-        createdAt: serverTimestamp(),
+        userId: user.uid,
+        avatarUrl: user.photoURL || "",
       });
 
-      const postRef = doc(db, "posts", postId);
-      await updateDoc(postRef, { commentsCount: increment(1) });
-
       setComment("");
+      // 親コンポーネントに通知
+      if (onCommentAdded) {
+        onCommentAdded();
+      }
     } catch (error) {
       console.error("コメント送信エラー:", error);
       alert("コメントの送信に失敗しました。");

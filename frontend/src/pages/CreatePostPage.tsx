@@ -1,9 +1,5 @@
-
-
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { db } from "../firebase";
-import { collection, addDoc, serverTimestamp, query, where, getDocs } from "firebase/firestore";
 import {
   Container,
   Paper,
@@ -13,6 +9,8 @@ import {
   Button,
 } from "@mui/material";
 import { useAuth } from "../hooks/useAuth";
+import { getCommunityById } from "../services/community";
+import { createPost } from "../services/post";
 
 export default function CreatePostPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -22,15 +20,20 @@ export default function CreatePostPage() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [community, setCommunity] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
 
- 
   useEffect(() => {
     const fetchCommunity = async () => {
       if (!slug) return;
-      const q = query(collection(db, "communities"), where("slug", "==", slug));
-      const snapshot = await getDocs(q);
-      if (!snapshot.empty) {
-        setCommunity(snapshot.docs[0].data());
+      try {
+        // コミュニティをslugで検索
+        const communities = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}/communities`).then(res => res.json());
+        const foundCommunity = communities.find((c: any) => c.slug === slug);
+        if (foundCommunity) {
+          setCommunity(foundCommunity);
+        }
+      } catch (error) {
+        console.error("Error fetching community:", error);
       }
     };
     fetchCommunity();
@@ -39,24 +42,22 @@ export default function CreatePostPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!slug || !user || !community) return; 
+    if (!slug || !user || !community) return;
 
+    setLoading(true);
     try {
-      await addDoc(collection(db, "posts"), {
-        communitySlug: slug,
-        communityName: community.displayName,      
-        communityIcon: community.iconUrl || "", 
+      await createPost({
         title,
         content,
-        uid: user.uid,
-        username: user.displayName || "",
-        avatarUrl: user.photoURL || "",
-        timestamp: serverTimestamp(),
-        commentsCount: 0,
+        username: user.displayName || "名無し",
+        communitySlug: slug,
       });
       navigate(`/r/${slug}`);
     } catch (error) {
       console.error("投稿エラー:", error);
+      alert("投稿に失敗しました。");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -84,6 +85,7 @@ export default function CreatePostPage() {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
+            disabled={loading}
             sx={{
               mb: 2,
               input: { color: "#fff" },
@@ -104,6 +106,7 @@ export default function CreatePostPage() {
             value={content}
             onChange={(e) => setContent(e.target.value)}
             required
+            disabled={loading}
             sx={{
               mb: 3,
               textarea: { color: "#fff" },
@@ -115,8 +118,8 @@ export default function CreatePostPage() {
             }}
           />
 
-          <Button type="submit" variant="contained" color="primary" fullWidth disabled={!community}>
-            投稿する
+          <Button type="submit" variant="contained" color="primary" fullWidth disabled={!community || loading}>
+            {loading ? "投稿中..." : "投稿する"}
           </Button>
         </Box>
       </Paper>

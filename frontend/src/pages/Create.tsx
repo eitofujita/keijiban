@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
-import { db } from "../firebase";
-import { collection, addDoc } from "firebase/firestore";
+import { createPost } from "../services/post";
 
 import {
   Container,
@@ -16,8 +15,10 @@ import {
 const Create = () => {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [communitySlug, setCommunitySlug] = useState("");
   const navigate = useNavigate();
   const { user, loading } = useAuth();
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!loading && user === null) {
@@ -34,14 +35,20 @@ const Create = () => {
       return;
     }
 
+    if (!communitySlug.trim()) {
+      alert("コミュニティスラッグを入力してください。");
+      return;
+    }
+
     console.log("🟢 投稿処理開始");
+    setSubmitting(true);
 
     try {
-      await addDoc(collection(db, "posts"), {
+      await createPost({
         title,
         content,
-        uid: user.uid,
-        createdAt: new Date(),
+        username: user.displayName || "名無し",
+        communitySlug: communitySlug.trim(),
       });
 
       console.log("✅ 投稿成功:", { title, content, uid: user.uid });
@@ -50,6 +57,8 @@ const Create = () => {
     } catch (error) {
       console.error("❌ 投稿失敗:", error);
       alert("投稿に失敗しました。");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -73,10 +82,30 @@ const Create = () => {
           <TextField
             fullWidth
             variant="outlined"
+            label="コミュニティスラッグ"
+            value={communitySlug}
+            onChange={(e) => setCommunitySlug(e.target.value)}
+            required
+            placeholder="例: programming"
+            sx={{
+              mb: 2,
+              input: { color: "#fff" },
+              label: { color: "#bbb" },
+              "& .MuiOutlinedInput-root": {
+                "& fieldset": { borderColor: "#555" },
+                "&:hover fieldset": { borderColor: "#888" },
+              },
+            }}
+          />
+
+          <TextField
+            fullWidth
+            variant="outlined"
             label="タイトル"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
+            disabled={submitting}
             sx={{
               mb: 2,
               input: { color: "#fff" },
@@ -97,9 +126,10 @@ const Create = () => {
             value={content}
             onChange={(e) => setContent(e.target.value)}
             required
+            disabled={submitting}
             sx={{
               mb: 3,
-              input: { color: "#fff" },
+              textarea: { color: "#fff" },
               label: { color: "#bbb" },
               "& .MuiOutlinedInput-root": {
                 "& fieldset": { borderColor: "#555" },
@@ -108,8 +138,8 @@ const Create = () => {
             }}
           />
 
-          <Button type="submit" variant="contained" color="primary" fullWidth>
-            投稿する
+          <Button type="submit" variant="contained" color="primary" fullWidth disabled={submitting}>
+            {submitting ? "投稿中..." : "投稿する"}
           </Button>
         </Box>
       </Paper>

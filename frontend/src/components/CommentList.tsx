@@ -1,16 +1,4 @@
 import { useEffect, useState } from "react";
-import { db } from "../firebase";
-import {
-  collection,
-  query,
-  orderBy,
-  onSnapshot,
-  deleteDoc,
-  doc,
-  updateDoc,
-  increment,
-  Timestamp,
-} from "firebase/firestore";
 import { useAuth } from "../hooks/useAuth";
 import {
   List,
@@ -25,21 +13,19 @@ import {
   Box,
 } from "@mui/material";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
+import {
+  getCommentsByPostId,
+  updateComment,
+  deleteComment,
+  type Comment,
+} from "../services/comment";
 
 type CommentListProps = {
   postId: string;
 };
 
-type CommentData = {
-  id: string;
-  text: string;
-  uid: string;
-  username: string;
-  createdAt?: Timestamp | null;
-};
-
 export default function CommentList({ postId }: CommentListProps) {
-  const [comments, setComments] = useState<CommentData[]>([]);
+  const [comments, setComments] = useState<Comment[]>([]);
   const { user } = useAuth();
 
   // どのコメントを編集中か
@@ -49,37 +35,36 @@ export default function CommentList({ postId }: CommentListProps) {
   useEffect(() => {
     if (!postId) return;
 
-    const q = query(
-      collection(db, "posts", postId, "comments"),
-      orderBy("createdAt", "asc")
-    );
+    const fetchComments = async () => {
+      try {
+        const commentsData = await getCommentsByPostId(postId);
+        setComments(commentsData);
+      } catch (error) {
+        console.error("Error fetching comments:", error);
+      }
+    };
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setComments(
-        snapshot.docs.map(
-          (doc) => ({ id: doc.id, ...doc.data() } as CommentData)
-        )
-      );
-    });
-
-    return () => unsubscribe();
+    fetchComments();
+    // 定期的に更新（ポーリング）
+    const interval = setInterval(fetchComments, 3000);
+    return () => clearInterval(interval);
   }, [postId]);
 
-  const handleDelete = async (commentId: string, commentUid: string) => {
+  const handleDelete = async (commentId: string, commentUserId: string) => {
     if (!user) {
       alert("ログインしてください。");
       return;
     }
-    if (user.uid !== commentUid) {
+    if (user.uid !== commentUserId) {
       alert("自分のコメントだけ削除できます。");
       return;
     }
 
     try {
-      await deleteDoc(doc(db, "posts", postId, "comments", commentId));
-
-      const postRef = doc(db, "posts", postId);
-      await updateDoc(postRef, { commentsCount: increment(-1) });
+      await deleteComment(commentId, user.uid);
+      // コメント一覧を再取得
+      const commentsData = await getCommentsByPostId(postId);
+      setComments(commentsData);
     } catch (err) {
       console.error("コメント削除エラー:", err);
       alert("コメントの削除に失敗しました。");
@@ -90,9 +75,24 @@ export default function CommentList({ postId }: CommentListProps) {
   const handleUpdate = async (commentId: string) => {
     if (!user) return;
 
-    const commentRef = doc(db, "posts", postId, "comments", commentId);
-    await updateDoc(commentRef, { text: editText });
-    setEditingId(null); // 編集モード解除
+    try {
+      await updateComment(commentId, editText, user.uid);
+      setEditingId(null); // 編集モード解除
+      // コメント一覧を再取得
+      const commentsData = await getCommentsByPostId(postId);
+      setComments(commentsData);
+    } catch (error) {
+      console.error("Error updating comment:", error);
+      alert("コメントの更新に失敗しました。");
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    try {
+      return new Date(dateString).toLocaleString();
+    } catch {
+      return "";
+    }
   };
 
   return (
@@ -104,16 +104,16 @@ export default function CommentList({ postId }: CommentListProps) {
       ) : (
         comments.map((c) => (
           <ListItem
-            key={c.id}
+            key={c._id}
             alignItems="flex-start"
             secondaryAction={
-              user?.uid === c.uid && editingId !== c.id && (
+              user?.uid === c.userId && editingId !== c._id && (
                 <CommentOptions
-                  commentId={c.id}
+                  commentId={c._id}
                   currentText={c.text}
-                  onDelete={() => handleDelete(c.id, c.uid)}
+                  onDelete={() => handleDelete(c._id, c.userId)}
                   onEdit={() => {
-                    setEditingId(c.id);
+                    setEditingId(c._id);
                     setEditText(c.text);
                   }}
                 />
@@ -127,7 +127,7 @@ export default function CommentList({ postId }: CommentListProps) {
                 </Typography>
               }
               secondary={
-                editingId === c.id ? (
+                editingId === c._id ? (
                   <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
                     <TextField
                       value={editText}
@@ -141,7 +141,7 @@ export default function CommentList({ postId }: CommentListProps) {
                     <Button
                       variant="contained"
                       size="small"
-                      onClick={() => handleUpdate(c.id)}
+                      onClick={() => handleUpdate(c._id)}
                     >
                       保存
                     </Button>
@@ -156,17 +156,15 @@ export default function CommentList({ postId }: CommentListProps) {
                 ) : (
                   <Typography sx={{ color: "#ccc" }}>
                     {c.text}
-                    {c.createdAt && (
-                      <span
-                        style={{
-                          fontSize: "0.7rem",
-                          marginLeft: 8,
-                          color: "#888",
-                        }}
-                      >
-                        {c.createdAt.toDate().toLocaleString()}
-                      </span>
-                    )}
+                    <span
+                      style={{
+                        fontSize: "0.7rem",
+                        marginLeft: 8,
+                        color: "#888",
+                      }}
+                    >
+                      {formatDate(c.createdAt)}
+                    </span>
                   </Typography>
                 )
               }
@@ -178,7 +176,7 @@ export default function CommentList({ postId }: CommentListProps) {
   );
 }
 
-/* 🔹 コメントのオプションメニュー */
+/* コメントのオプションメニュー */
 function CommentOptions({
   commentId,
   currentText,

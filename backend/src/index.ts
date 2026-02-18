@@ -1,11 +1,16 @@
 import app from "./app";
 import { initializeIndexes } from "./services/meilisearch";
+import { connectDB } from "./services/db";
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 async function startServer() {
   try {
     console.log('Starting server initialization...');
+
+    // Connect to MongoDB
+    await connectDB();
+    console.log('✅ MongoDB connected');
 
     // Initialize Meilisearch indexes
     await initializeIndexes();

@@ -17,179 +17,174 @@ import ThumbUpIcon from "@mui/icons-material/ThumbUp";
 import ThumbDownIcon from "@mui/icons-material/ThumbDown";
 import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 
-import { db } from "../firebase";
-import {
-  doc,
-  getDoc,
-  updateDoc,
-  arrayUnion,
-  arrayRemove,
-  increment,
-  collection,
-  addDoc,
-  serverTimestamp,
-  query,
-  orderBy,
-  onSnapshot,
-  deleteDoc,
-} from "firebase/firestore";
 import { useAuth } from "../hooks/useAuth";
 import CommentOptions from "../components/CommentOptions";
+import {
+  getCommentsByPostId,
+  createComment,
+  updateComment,
+  deleteComment,
+  toggleCommentReaction,
+  type Comment,
+} from "../services/comment";
+import { getPostById, togglePostReaction, type Post } from "../services/post";
 
 export default function CommentPage() {
   const { id } = useParams();
   const { user } = useAuth();
 
-  const [post, setPost] = useState<any>(null);
+  const [post, setPost] = useState<Post | null>(null);
   const [comment, setComment] = useState("");
-  const [comments, setComments] = useState<any[]>([]);
+  const [comments, setComments] = useState<Comment[]>([]);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  // 🔹 投稿データ取得（リアルタイムに変更した方がいい）
+  // 投稿データ取得
   useEffect(() => {
     if (!id) return;
-    const ref = doc(db, "posts", id);
-    const unsub = onSnapshot(ref, (snap) => {
-      if (snap.exists()) setPost({ id: snap.id, ...snap.data() });
-    });
-    return () => unsub();
+    const fetchPost = async () => {
+      try {
+        const postData = await getPostById(id);
+        setPost(postData);
+      } catch (error) {
+        console.error("Error fetching post:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPost();
+    // 定期的に更新（ポーリング）
+    const interval = setInterval(fetchPost, 3000);
+    return () => clearInterval(interval);
   }, [id]);
 
-  // 🔹 コメント取得（リアルタイム）
+  // コメント取得
   useEffect(() => {
     if (!id) return;
-    const q = query(
-      collection(db, "posts", id, "comments"),
-      orderBy("createdAt", "asc")
-    );
-    const unsub = onSnapshot(q, (snapshot) => {
-      setComments(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-    });
-    return () => unsub();
+    const fetchComments = async () => {
+      try {
+        const commentsData = await getCommentsByPostId(id);
+        setComments(commentsData);
+      } catch (error) {
+        console.error("Error fetching comments:", error);
+      }
+    };
+    fetchComments();
+    // 定期的に更新（ポーリング）
+    const interval = setInterval(fetchComments, 3000);
+    return () => clearInterval(interval);
   }, [id]);
 
-  // 🔹 投稿に Like
-  const handleLikePost = async () => {
-    if (!id || !user) return;
-    const ref = doc(db, "posts", id);
-    if (post.likedBy?.includes(user.uid)) {
-      await updateDoc(ref, { likedBy: arrayRemove(user.uid) });
-    } else {
-      await updateDoc(ref, {
-        likedBy: arrayUnion(user.uid),
-        dislikedBy: arrayRemove(user.uid),
-      });
-    }
-  };
-
-  // 🔹 投稿に Dislike
-  const handleDislikePost = async () => {
-    if (!id || !user) return;
-    const ref = doc(db, "posts", id);
-    if (post.dislikedBy?.includes(user.uid)) {
-      await updateDoc(ref, { dislikedBy: arrayRemove(user.uid) });
-    } else {
-      await updateDoc(ref, {
-        dislikedBy: arrayUnion(user.uid),
-        likedBy: arrayRemove(user.uid),
-      });
-    }
-  };
-
-  // 🔹 新規コメント追加
+  // 新規コメント追加
   const handleComment = async () => {
-    if (!user || !comment.trim()) return;
-    await addDoc(collection(db, "posts", id!, "comments"), {
-      text: comment.trim(),
-      username: user.displayName || "名無し",
-      avatarUrl: user.photoURL || "",
-      uid: user.uid,
-      createdAt: serverTimestamp(),
-      likedBy: [],
-      dislikedBy: [],
-      parentId: null,
-    });
-    const postRef = doc(db, "posts", id!);
-    await updateDoc(postRef, { commentsCount: increment(1) });
-    setComment("");
+    if (!user || !comment.trim() || !id) return;
+    try {
+      await createComment(id, {
+        text: comment.trim(),
+        username: user.displayName || "名無し",
+        userId: user.uid,
+        parentId: null,
+        avatarUrl: user.photoURL || "",
+      });
+      setComment("");
+      // コメント一覧を再取得
+      const commentsData = await getCommentsByPostId(id);
+      setComments(commentsData);
+    } catch (error) {
+      console.error("Error creating comment:", error);
+      alert("コメントの送信に失敗しました。");
+    }
   };
 
-  // 🔹 返信コメント追加
+  // 返信コメント追加
   const handleReplySubmit = async (parentId: string) => {
-    if (!user || !replyText.trim()) return;
-    await addDoc(collection(db, "posts", id!, "comments"), {
-      text: replyText.trim(),
-      username: user.displayName || "名無し",
-      avatarUrl: user.photoURL || "",
-      uid: user.uid,
-      createdAt: serverTimestamp(),
-      likedBy: [],
-      dislikedBy: [],
-      parentId,
-    });
-    setReplyText("");
-    setReplyingTo(null);
+    if (!user || !replyText.trim() || !id) return;
+    try {
+      await createComment(id, {
+        text: replyText.trim(),
+        username: user.displayName || "名無し",
+        userId: user.uid,
+        parentId,
+        avatarUrl: user.photoURL || "",
+      });
+      setReplyText("");
+      setReplyingTo(null);
+      // コメント一覧を再取得
+      const commentsData = await getCommentsByPostId(id);
+      setComments(commentsData);
+    } catch (error) {
+      console.error("Error creating reply:", error);
+      alert("返信の送信に失敗しました。");
+    }
   };
 
-  // 🔹 コメント削除
+  // コメント削除
   const handleDelete = async (commentId: string) => {
-    if (!id) return;
-    await deleteDoc(doc(db, "posts", id, "comments", commentId));
-    const postRef = doc(db, "posts", id);
-    await updateDoc(postRef, { commentsCount: increment(-1) });
+    if (!id || !user) return;
+    try {
+      await deleteComment(commentId, user.uid);
+      // コメント一覧を再取得
+      const commentsData = await getCommentsByPostId(id);
+      setComments(commentsData);
+    } catch (error) {
+      console.error("Error deleting comment:", error);
+      alert("コメントの削除に失敗しました。");
+    }
   };
 
-  // 🔹 コメント編集
+  // コメント編集
   const handleEdit = async (commentId: string, newText: string) => {
-    if (!id || !newText.trim()) return;
-    const ref = doc(db, "posts", id, "comments", commentId);
-    await updateDoc(ref, { text: newText.trim() });
-  };
-
-  // 🔹 コメント Like
-  const handleLikeComment = async (
-    commentId: string,
-    likedBy: string[] = [],
-    dislikedBy: string[] = []
-  ) => {
-    if (!id || !user) return;
-    const ref = doc(db, "posts", id, "comments", commentId);
-    if (likedBy.includes(user.uid)) {
-      await updateDoc(ref, { likedBy: arrayRemove(user.uid) });
-    } else {
-      await updateDoc(ref, {
-        likedBy: arrayUnion(user.uid),
-        dislikedBy: arrayRemove(user.uid),
-      });
+    if (!id || !newText.trim() || !user) return;
+    try {
+      await updateComment(commentId, newText.trim(), user.uid);
+      // コメント一覧を再取得
+      const commentsData = await getCommentsByPostId(id);
+      setComments(commentsData);
+    } catch (error) {
+      console.error("Error updating comment:", error);
+      alert("コメントの更新に失敗しました。");
     }
   };
 
-  // 🔹 コメント Dislike
-  const handleDislikeComment = async (
-    commentId: string,
-    likedBy: string[] = [],
-    dislikedBy: string[] = []
-  ) => {
+  // コメント Like
+  const handleLikeComment = async (commentId: string) => {
     if (!id || !user) return;
-    const ref = doc(db, "posts", id, "comments", commentId);
-    if (dislikedBy.includes(user.uid)) {
-      await updateDoc(ref, { dislikedBy: arrayRemove(user.uid) });
-    } else {
-      await updateDoc(ref, {
-        dislikedBy: arrayUnion(user.uid),
-        likedBy: arrayRemove(user.uid),
-      });
+    try {
+      const updatedComment = await toggleCommentReaction(commentId, user.uid, "like");
+      // コメント一覧を更新
+      setComments((prev) =>
+        prev.map((c) => (c._id === commentId ? updatedComment : c))
+      );
+    } catch (error) {
+      console.error("Error liking comment:", error);
     }
   };
 
-  if (!post) return <Typography>Loading...</Typography>;
+  // コメント Dislike
+  const handleDislikeComment = async (commentId: string) => {
+    if (!id || !user) return;
+    try {
+      const updatedComment = await toggleCommentReaction(commentId, user.uid, "dislike");
+      // コメント一覧を更新
+      setComments((prev) =>
+        prev.map((c) => (c._id === commentId ? updatedComment : c))
+      );
+    } catch (error) {
+      console.error("Error disliking comment:", error);
+    }
+  };
 
-  // 🔹 再帰的にコメントを描画
+  if (loading || !post) return <Typography>Loading...</Typography>;
+
+  // 再帰的にコメントを描画
   function renderComments(parentId: string | null, level = 0) {
-    const items = comments.filter((c) => c.parentId === parentId);
+    const items = comments.filter((c) => {
+      const pid = c.parentId?.toString() || null;
+      return pid === parentId;
+    });
     return items.map((c) => (
-      <Box key={c.id} sx={{ ml: level * 4, mt: 1 }}>
+      <Box key={c._id} sx={{ ml: level * 4, mt: 1 }}>
         <CommentItem
           c={c}
           user={user}
@@ -203,10 +198,18 @@ export default function CommentPage() {
           setReplyText={setReplyText}
           onReplySubmit={handleReplySubmit}
         />
-        {renderComments(c.id, level + 1)}
+        {renderComments(c._id, level + 1)}
       </Box>
     ));
   }
+
+  const formatDate = (dateString: string) => {
+    try {
+      return new Date(dateString).toLocaleString();
+    } catch {
+      return "";
+    }
+  };
 
   return (
     <Box sx={{ maxWidth: "700px", margin: "0 auto", color: "#fff" }}>
@@ -224,12 +227,10 @@ export default function CommentPage() {
                 textDecoration: "none",
               }}
             >
-              @{post.communityName}
+              @{post.communityName || post.communitySlug}
             </Typography>
             <Typography variant="body2" sx={{ color: "#aaa" }}>
-              {post.username} ・{" "}
-              {post.timestamp?.seconds &&
-                new Date(post.timestamp.seconds * 1000).toLocaleString()}
+              {post.username} ・ {formatDate(post.createdAt)}
             </Typography>
           </Box>
         </Box>
@@ -246,26 +247,42 @@ export default function CommentPage() {
           <IconButton
             size="small"
             sx={{
-              color: post.likedBy?.includes(user?.uid) ? "#1976d2" : "#bbb",
+              color: post.likedBy?.includes(user?.uid || "") ? "#1976d2" : "#bbb",
             }}
-            onClick={handleLikePost}
+            onClick={async () => {
+              if (!id || !user) return;
+              try {
+                const updatedPost = await togglePostReaction(id, user.uid, "like");
+                setPost(updatedPost);
+              } catch (error) {
+                console.error("Error liking post:", error);
+              }
+            }}
           >
             <ThumbUpIcon fontSize="small" />
             <Typography sx={{ ml: 0.5, fontSize: "0.8rem" }}>
-              {post.likedBy?.length || 0}
+              {post.likes || 0}
             </Typography>
           </IconButton>
 
           <IconButton
             size="small"
             sx={{
-              color: post.dislikedBy?.includes(user?.uid) ? "#d32f2f" : "#bbb",
+              color: post.dislikedBy?.includes(user?.uid || "") ? "#d32f2f" : "#bbb",
             }}
-            onClick={handleDislikePost}
+            onClick={async () => {
+              if (!id || !user) return;
+              try {
+                const updatedPost = await togglePostReaction(id, user.uid, "dislike");
+                setPost(updatedPost);
+              } catch (error) {
+                console.error("Error disliking post:", error);
+              }
+            }}
           >
             <ThumbDownIcon fontSize="small" />
             <Typography sx={{ ml: 0.5, fontSize: "0.8rem" }}>
-              {post.dislikedBy?.length || 0}
+              {post.dislikes || 0}
             </Typography>
           </IconButton>
         </Box>
@@ -310,7 +327,7 @@ export default function CommentPage() {
   );
 }
 
-// 🔹 コメント表示コンポーネント
+// コメント表示コンポーネント
 function CommentItem({
   c,
   user,
@@ -323,9 +340,29 @@ function CommentItem({
   replyText,
   setReplyText,
   onReplySubmit,
-}: any) {
+}: {
+  c: Comment;
+  user: any;
+  onLike: (commentId: string) => void;
+  onDislike: (commentId: string) => void;
+  onDelete: (commentId: string) => void;
+  onEdit: (commentId: string, newText: string) => void;
+  replyingTo: string | null;
+  setReplyingTo: (id: string | null) => void;
+  replyText: string;
+  setReplyText: (text: string) => void;
+  onReplySubmit: (parentId: string) => void;
+}) {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(c.text);
+
+  const formatDate = (dateString: string) => {
+    try {
+      return new Date(dateString).toLocaleString();
+    } catch {
+      return "";
+    }
+  };
 
   return (
     <Box
@@ -343,6 +380,9 @@ function CommentItem({
         <Typography sx={{ fontWeight: "bold", fontSize: "0.9rem" }}>
           {c.username}
         </Typography>
+        <Typography variant="caption" sx={{ color: "#888", ml: 1 }}>
+          {formatDate(c.createdAt)}
+        </Typography>
 
         {isEditing ? (
           <Box>
@@ -352,14 +392,14 @@ function CommentItem({
               size="small"
               value={editText}
               onChange={(e) => setEditText(e.target.value)}
-              sx={{ bgcolor: "#2c2c2c", input: { color: "#fff" }, mb: 1 }}
+              sx={{ bgcolor: "#2c2c2c", input: { color: "#fff" }, mb: 1, mt: 1 }}
             />
             <Box sx={{ display: "flex", gap: 1 }}>
               <Button
                 variant="contained"
                 size="small"
                 onClick={() => {
-                  onEdit(c.id, editText);
+                  onEdit(c._id, editText);
                   setIsEditing(false);
                 }}
               >
@@ -375,7 +415,7 @@ function CommentItem({
             </Box>
           </Box>
         ) : (
-          <Typography variant="body2" sx={{ color: "#ccc", mb: 0.5 }}>
+          <Typography variant="body2" sx={{ color: "#ccc", mb: 0.5, mt: 0.5 }}>
             {c.text}
           </Typography>
         )}
@@ -385,12 +425,14 @@ function CommentItem({
           <Box sx={{ display: "flex", gap: 2, mt: 0.5 }}>
             <IconButton
               size="small"
-              sx={{ color: c.likedBy?.includes(user?.uid) ? "#1976d2" : "#bbb" }}
-              onClick={() => onLike(c.id, c.likedBy || [], c.dislikedBy || [])}
+              sx={{
+                color: c.likedBy?.includes(user?.uid) ? "#1976d2" : "#bbb",
+              }}
+              onClick={() => onLike(c._id)}
             >
               <ThumbUpIcon fontSize="small" />
               <Typography sx={{ ml: 0.5, fontSize: "0.8rem" }}>
-                {c.likedBy?.length || 0}
+                {c.likes || 0}
               </Typography>
             </IconButton>
 
@@ -399,20 +441,18 @@ function CommentItem({
               sx={{
                 color: c.dislikedBy?.includes(user?.uid) ? "#d32f2f" : "#bbb",
               }}
-              onClick={() =>
-                onDislike(c.id, c.likedBy || [], c.dislikedBy || [])
-              }
+              onClick={() => onDislike(c._id)}
             >
               <ThumbDownIcon fontSize="small" />
               <Typography sx={{ ml: 0.5, fontSize: "0.8rem" }}>
-                {c.dislikedBy?.length || 0}
+                {c.dislikes || 0}
               </Typography>
             </IconButton>
 
             <IconButton
               size="small"
               sx={{ color: "#bbb" }}
-              onClick={() => setReplyingTo(c.id)}
+              onClick={() => setReplyingTo(c._id)}
             >
               <ChatBubbleOutlineIcon fontSize="small" />
               <Typography sx={{ ml: 0.5, fontSize: "0.8rem" }}>返信</Typography>
@@ -421,7 +461,7 @@ function CommentItem({
         )}
 
         {/* 返信入力フォーム */}
-        {replyingTo === c.id && (
+        {replyingTo === c._id && (
           <Box sx={{ mt: 1 }}>
             <TextField
               fullWidth
@@ -436,7 +476,7 @@ function CommentItem({
               <Button
                 variant="contained"
                 size="small"
-                onClick={() => onReplySubmit(c.id)}
+                onClick={() => onReplySubmit(c._id)}
               >
                 送信
               </Button>
@@ -453,9 +493,9 @@ function CommentItem({
       </Box>
 
       {/* 自分のコメントだけ削除・編集可能 */}
-      {user?.uid === c.uid && !isEditing && (
+      {user?.uid === c.userId && !isEditing && (
         <CommentOptions
-          onDelete={() => onDelete(c.id)}
+          onDelete={() => onDelete(c._id)}
           onEdit={() => setIsEditing(true)}
         />
       )}
